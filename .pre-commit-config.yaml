@@ -1,0 +1,62 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+## general purpose linting and formatting
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.4.0
+  hooks:
+  - id: trailing-whitespace
+  - id: end-of-file-fixer
+  - id: check-yaml
+  - id: check-added-large-files
+- repo: https://github.com/codespell-project/codespell
+  rev: v1.17.1
+  hooks:
+  - id: codespell
+
+## Python support
+- repo: https://github.com/psf/black
+  rev: 19.10b0
+  hooks:
+  - id: black
+- repo: https://gitlab.com/PyCQA/flake8
+  rev: 3.8.3
+  hooks:
+  - id: flake8
+    exclude: ^report/
+- repo: https://github.com/timothycrosley/isort
+  rev: 5.5.3
+  hooks:
+  - id: isort
+
+
+## Snakemake linting
+- repo: https://github.com/snakemake/snakefmt
+  rev: 0.2.4
+  hooks:
+  - id: snakefmt
+
+
+## C++ support
+- repo: https://gitlab.com/daverona/pre-commit/cpp
+  rev: 0.8.0
+  hooks:
+  - id: clang-format
+  - id: cpplint
+    args: ["--includeorder=default"]
+  - id: cppcheck
+
+
+## R support
+- repo: https://github.com/lorenzwalthert/precommit
+  rev: v0.1.3
+  hooks:
+  - id: style-files
+  - id: parsable-R
+  - id: no-browser-statement
+  - id: lintr
+    verbose: true
+## Note: the following three hooks apply only to R package development
+#  - id: roxygenize
+#  - id: deps-in-desc
+#  - id: use-tidy-description

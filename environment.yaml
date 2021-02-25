@@ -1,0 +1,7 @@
+name: germlineSmallVariantCallingV4
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - snakemake
