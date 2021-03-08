@@ -1,0 +1,8 @@
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - unzip=6.0
+  - deepvariant ==1.0.0
+  - tensorflow-estimator=2.0.0
