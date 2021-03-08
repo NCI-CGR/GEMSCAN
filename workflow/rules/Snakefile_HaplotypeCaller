@@ -1,0 +1,288 @@
+#!/usr/bin/env python3
+# Authors: Shalabh Suman, Bari Ballew
+
+"""HaplotyeCaller module of CGR germline variant calling pipeline
+"""
+
+from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
+
+if clusterMode == "gcp":
+    GS = GSRemoteProvider()
+
+
+rule HC_call_variants:
+    """Call gVCFs with GATK4
+    Runs over each chrom in parallel if by_chrom is true
+    """
+    input:
+        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
+        i1=GS.remote(refGenome + ".amb") if clusterMode == "gcp" else refGenome + ".amb",
+        i2=GS.remote(refGenome + ".ann") if clusterMode == "gcp" else refGenome + ".ann",
+        i3=GS.remote(refGenome + ".bwt") if clusterMode == "gcp" else refGenome + ".bwt",
+        i4=GS.remote(refGenome + ".pac") if clusterMode == "gcp" else refGenome + ".pac",
+        i5=GS.remote(refGenome + ".sa") if clusterMode == "gcp" else refGenome + ".sa",
+        i6=GS.remote(refGenome + ".fai") if clusterMode == "gcp" else refGenome + ".fai",
+        i7=GS.remote(dictionaryFile) if clusterMode == "gcp" else dictionaryFile,
+        bed="split_regions/{chrom}.bed" if by_chrom else bedFile,
+        bam=(
+            lambda wc: GS.remote(sample2bam[wc.sample])
+            if clusterMode == "gcp"
+            else lambda wc: sample2bam[wc.sample]
+        ),
+        bai=(
+            lambda wc: GS.remote(sample2bam[wc.sample] + ".bai")
+            if clusterMode == "gcp"
+            else lambda wc: GS.remote(sample2bam[wc.sample])
+        ),
+    output:
+        gvcf=(
+            temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf")
+            if by_chrom
+            else temp("HaplotypeCaller/called/{sample}.g.vcf")
+        ),
+        idx=(
+            temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx")
+            if by_chrom
+            else temp("HaplotypeCaller/called/{sample}.g.vcf.idx")
+        ),
+    benchmark:
+        "run_times/HC_call_variants/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_call_variants/{sample}.tsv"
+    conda:
+        "../envs/gatk4.yaml"
+    shell:
+        'gatk --java-options "-Xmx8G" HaplotypeCaller \
+                                    -R {input.ref} \
+                                    -I {input.bam} \
+                                    -ERC GVCF \
+                                    -L {input.bed} \
+                                    -O {output.gvcf} \
+                                    -new-qual \
+                                    -G StandardAnnotation \
+                                    -G StandardHCAnnotation'
+
+
+rule HC_compress_gvcfs:
+    """Zip and index gVCFs
+    """
+    input:
+        gvcf=(
+            "HaplotypeCaller/called/{chrom}/{sample}.g.vcf"
+            if by_chrom
+            else "HaplotypeCaller/called/{sample}.g.vcf"
+        ),
+        idx=(
+            "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx"
+            if by_chrom
+            else "HaplotypeCaller/called/{sample}.g.vcf.idx"
+        ),
+    output:
+        temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz") if by_chrom else temp(
+            "HaplotypeCaller/called/{sample}.g.vcf.gz"
+        ),
+        temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz.tbi") if by_chrom else temp(
+            "HaplotypeCaller/called/{sample}.g.vcf.gz.tbi"
+        ),
+    benchmark:
+        "run_times/HC_compress_gvcfs/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_compress_gvcfs/{sample}.tsv"
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "bgzip {input.gvcf}; tabix -p vcf {input.gvcf}.gz"
+
+
+rule HC_concat_gvcfs:
+    """
+    Not clear whether it would be fastest to concat per-chrom gvcfs and
+    then genotype, or genotype and then concat.
+    """
+    input:
+        vcfList=expand("HaplotypeCaller/called/{chrom}/{{sample}}.g.vcf.gz", chrom=chromList),
+        indexList=expand(
+            "HaplotypeCaller/called/{chrom}/{{sample}}.g.vcf.gz.tbi", chrom=chromList
+        ),
+    output:
+        gz="HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz",
+    params:
+        gvcfList=lambda wildcards, input: " -I ".join(input.vcfList),
+    benchmark:
+        "run_times/HC_concat_gvcfs/{sample}.tsv"
+    conda:
+        "../envs/gatk4.yaml"
+    shell:
+        'gatk --java-options "-Xmx4G" GatherVcfs -I {params.gvcfList} -O {output.gz}'
+
+
+rule HC_index_gvcf:
+    input:
+        "HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz",
+    output:
+        "HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz.tbi",
+    benchmark:
+        "run_times/HC_index_gvcf/{sample}.tsv"
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "tabix -p vcf {input}"
+
+
+rule HC_create_each_sample_map_file:
+    """Create sample file to be read by GenomicsDBImport
+
+    Can pass all vcfs on the command line, each with a -V before it,
+    but with enough samples you will hit the character limit.  Instead,
+    create a sample map file and read from it.
+
+    sample map is formatted as follows: sample_name--tab--path_to_sample_vcf per line
+
+    See GATK's documentation for additional details.
+    """
+    input:
+        gvcf=(
+            "HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz"
+            if by_chrom
+            else "HaplotypeCaller/called/{sample}.g.vcf.gz"
+        ),
+        index=(
+            "HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz.tbi"
+            if by_chrom
+            else "HaplotypeCaller/called/{sample}.g.vcf.gz.tbi"
+        ),
+    output:
+        temp("HaplotypeCaller/DBImport/{sample}.map"),
+    benchmark:
+        "run_times/create_sample_map/{sample}.tsv"
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "n=$(bcftools query -l {input.gvcf});"
+        'echo "${{n}}\t{input.gvcf}" > {output}'
+
+
+rule HC_create_cohort_map_file:
+    input:
+        expand("HaplotypeCaller/DBImport/{sample}.map", sample=sampleList),
+    output:
+        "HaplotypeCaller/DBImport/cohort.sample_map",
+    params:
+        mapDir=outputDir + "HaplotypeCaller/DBImport/",
+    benchmark:
+        "run_times/create_cohort_map_file.tsv"
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "for i in {params.mapDir}*.map; do cat $i >> {output}; done"
+
+
+rule combine_gvcfs:
+    input:
+        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
+        i1=GS.remote(refGenome + ".amb") if clusterMode == "gcp" else refGenome + ".amb",
+        i2=GS.remote(refGenome + ".ann") if clusterMode == "gcp" else refGenome + ".ann",
+        i3=GS.remote(refGenome + ".bwt") if clusterMode == "gcp" else refGenome + ".bwt",
+        i4=GS.remote(refGenome + ".pac") if clusterMode == "gcp" else refGenome + ".pac",
+        i5=GS.remote(refGenome + ".sa") if clusterMode == "gcp" else refGenome + ".sa",
+        i6=GS.remote(refGenome + ".fai") if clusterMode == "gcp" else refGenome + ".fai",
+        i7=GS.remote(dictionaryFile) if clusterMode == "gcp" else dictionaryFile,
+        bed=GS.remote(bedFile) if clusterMode == "gcp" else bedFile,
+        gvcf=(
+            expand("HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz", sample=sampleList)
+            if by_chrom
+            else expand("HaplotypeCaller/called/{sample}.g.vcf.gz", sample=sampleList)
+        ),
+        index=(
+            expand("HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz.tbi", sample=sampleList)
+            if by_chrom
+            else expand("HaplotypeCaller/called/{sample}.g.vcf.gz.tbi", sample=sampleList)
+        ),
+    output:
+        gvcf="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz",
+        idx="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz.tbi",
+    params:
+        gvcf=(
+            list(
+                map(
+                    "-V {}".format,
+                    expand(
+                        outputDir + "HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz",
+                        sample=sampleList,
+                    ),
+                )
+            )
+            if by_chrom
+            else list(
+                map(
+                    "-V {}".format,
+                    expand(
+                        outputDir + "HaplotypeCaller/called/{sample}.g.vcf.gz", sample=sampleList
+                    ),
+                )
+            )
+        ),
+    log:
+        "logs/gatk/combinegvcfs.log",
+    resources:
+        mem_mb=1024,
+    conda:
+        "../envs/gatk4.yaml"
+    shell:
+        'gatk --java-options "-Xmx20G" CombineGVCFs \
+                                {params.gvcf} \
+                                -R {input.ref} \
+                                -O {output.gvcf} '
+
+
+rule HC_genotype_gvcfs:
+    input:
+        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
+        i1=GS.remote(refGenome + ".amb") if clusterMode == "gcp" else refGenome + ".amb",
+        i2=GS.remote(refGenome + ".ann") if clusterMode == "gcp" else refGenome + ".ann",
+        i3=GS.remote(refGenome + ".bwt") if clusterMode == "gcp" else refGenome + ".bwt",
+        i4=GS.remote(refGenome + ".pac") if clusterMode == "gcp" else refGenome + ".pac",
+        i5=GS.remote(refGenome + ".sa") if clusterMode == "gcp" else refGenome + ".sa",
+        i6=GS.remote(refGenome + ".fai") if clusterMode == "gcp" else refGenome + ".fai",
+        i7=GS.remote(dictionaryFile) if clusterMode == "gcp" else dictionaryFile,
+        bed=GS.remote(bedFile) if clusterMode == "gcp" else bedFile,
+        gvcf="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz",
+        idx="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz.tbi",
+    output:
+        vcf="HaplotypeCaller/genotyped/{chrom}.vcf.gz",
+        idx="HaplotypeCaller/genotyped/{chrom}.vcf.gz.tbi",
+    log:
+        "logs/gatk/genotypegvcfs.{chrom}.log",
+    params:
+        interval="{chrom}",
+    resources:
+        mem_mb=1024,
+    conda:
+        "../envs/gatk4.yaml"
+    shell:
+        'gatk --java-options "-Xmx20G" GenotypeGVCFs \
+                              -V {input.gvcf} \
+                              -R {input.ref} \
+                              -O {output.vcf} \
+                              -stand-call-conf 30 \
+                                    -new-qual \
+                                    -G StandardAnnotation \
+                                    -G StandardHCAnnotation \
+                                    -L {params.interval}'
+
+
+rule HC_concat_vcfs_bcftools:
+    """
+    """
+    input:
+        vcfList=expand("HaplotypeCaller/genotyped/{chrom}.vcf.gz", chrom=chromList),
+        indexList=expand("HaplotypeCaller/genotyped/{chrom}.vcf.gz.tbi", chrom=chromList),
+    output:
+        projectVCF=protected("HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz"),
+        idx=protected("HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz.tbi"),
+    params:
+        t=temp(directory("HC_concat_vcfs_bcftools")),
+    benchmark:
+        "run_times/HC_concat_vcfs_bcftools/HC_variants.tsv"
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "mkdir -p {params.t};"
+        "bcftools concat -a {input.vcfList} -Ou | bcftools sort -T {params.t} -Oz -o {output.projectVCF};"
+        "tabix -p vcf {output.projectVCF}"

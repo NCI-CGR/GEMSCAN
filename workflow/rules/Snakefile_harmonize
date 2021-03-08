@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+# Authors: Bari Ballew, Wendy Wong
+
+"""VCF harmonization module of CGR germline variant calling pipeline
+"""
+
+from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
+
+if clusterMode == "gcp":
+    GS = GSRemoteProvider()
+
+
+rule Strelka2_norm_left_align_split:
+    """Normalize, left-align, and split mulit-allelics in the Strelka2 vcf.
+    """
+    input:
+        vcf="strelka2/genotyped/strelka2_variants.vcf.gz",
+        i="strelka2/genotyped/strelka2_variants.vcf.gz.tbi",
+        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
+    output:
+        "ensemble/strelka2_normalized.vcf.gz",
+    benchmark:
+        "run_times/strelka2_norm_left-align_split/norm.tsv"
+    threads: threads
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} | bcftools view --min-ac 1 -Oz -o {output}"
+
+
+rule HC_norm_left_align_split:
+    """Normalize, left-align, and split mulit-allelics in the HC vcf.
+    """
+    input:
+        vcf="HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz",
+        i="HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz.tbi",
+        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
+    output:
+        "ensemble/HC_normalized.vcf.gz",
+    benchmark:
+        "run_times/HC_norm_left-align_split/norm.tsv"
+    threads: threads
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} -Oz -o {output}"
+
+
+rule DV_norm_left_align_split:
+    """Normalize, left-align, and split mulit-allelics in the DV vcf.
+    """
+    input:
+        vcf="deepVariant/genotyped/DV_variants.vcf.gz",
+        i="deepVariant/genotyped/DV_variants.vcf.gz.tbi",
+        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
+    output:
+        "ensemble/DV_normalized.vcf.gz",
+    benchmark:
+        "run_times/DV_norm_left-align_split/norm.tsv"
+    threads: threads
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} -Oz -o {output}"
+
+
+rule separate_header_and_vars:
+    input:
+        "ensemble/{caller}_normalized.vcf.gz",
+    output:
+        h="ensemble/{caller}_header.vcf",
+        v="ensemble/{caller}_vars.vcf",
+    benchmark:
+        "run_times/separate_header_and_vars/{caller}.tsv"
+    threads: threads
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "bcftools view --threads {threads} -I -h {input} -Ov -o {output.h};"
+        "bcftools view --threads {threads} -I -H {input} -Ov -o {output.v}"
+
+
+rule prepend_labels:
+    """Prepend INFO and FORMAT tags with DV_ or HC_ or strelka2
+    Update headers to match.
+    Note that this is a bash script with no unit testing implemented.
+    """
+    input:
+        v="ensemble/{caller}_vars.vcf",
+        h="ensemble/{caller}_header.vcf",
+    output:
+        v="ensemble/prepended.{caller}_vars.vcf",
+        h="ensemble/prepended.{caller}_header.vcf",
+    benchmark:
+        "run_times/prepend_labels/{caller}.tsv"
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "scripts/prepend_labels.sh {input.v} {input.h} {wildcards.caller};"
+
+
+rule recombine_headers_and_vars:
+    """
+    """
+    input:
+        v="ensemble/prepended.{caller}_vars.vcf",
+        h="ensemble/prepended.{caller}_header.vcf",
+    output:
+        g="ensemble/{caller}_labeled.vcf.gz",
+        i="ensemble/{caller}_labeled.vcf.gz.tbi",
+    benchmark:
+        "run_times/recombine_headers_and_vars/{caller}.tsv" # threads:
+    params:
+        v=outputDir + "ensemble/{caller}_labeled.vcf",
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "cat {input.h} {input.v} > {params.v};"
+        "bgzip {params.v}; tabix -p vcf {output.g}"
+
+
+rule merge_by_variant:
+    """
+    Note that GATK CombineVariants and MergeVcfs were also tried here.
+    MergeVCFS interleaves by row (useless).
+    CombineVariants works quite nicely except that it incorrectly merges
+    multi-allelics ((0/1 C>A 0/1 C>T both become 0/1 C>A,T, so you lose
+    the alt2 information entirely).  This behavior is hard coded.  Usage tried:
+        # 'java -jar /DCEG/CGF/Bioinformatics/Production/Bari/gatk3.7/GenomeAnalysisTK.jar -T CombineVariants -R /DCEG/CGF/Bioinformatics/Production/Bari/refGenomes/Homo_sapiens_assembly19.fasta -V:dv dv.vcf -V:hc hc.vcf  -o prioritize_dv_hc.vcf -genotypeMergeOptions PRIORITIZE -priority dv,hc'
+        # 'java -jar /DCEG/CGF/Bioinformatics/Production/Bari/gatk3.7/GenomeAnalysisTK.jar -T CombineVariants -R /DCEG/CGF/Bioinformatics/Production/Bari/refGenomes/Homo_sapiens_assembly19.fasta -V:dv dv.vcf -V:hc hc.vcf  -o prioritize_hc_dv.vcf -genotypeMergeOptions PRIORITIZE -priority hc,dv'
+    bcftools merge gets closest to the desired format while still
+    maintaining all information in the vcf.
+    """
+    input:
+        vcf=expand("ensemble/{caller}_labeled.vcf.gz", caller=CALLERS),
+        vcf_index=expand("ensemble/{caller}_labeled.vcf.gz.tbi", caller=CALLERS),
+    output:
+        "ensemble/all_callers.vcf",
+    benchmark:
+        "run_times/merge_by_variant/all_callers.tsv"
+    threads: threads
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "bcftools merge --force-samples --threads {threads} -m none {input.vcf} -Ov -o {output}"
+
+
+rule merge_by_sample:
+    """
+    Note that this python script has a companion suite of unit tests in the
+    scripts/ directory.
+    """
+    input:
+        "ensemble/all_callers.vcf",
+    output:
+        g="ensemble/all_callers_merged_genotypes.vcf.gz",
+        i="ensemble/all_callers_merged_genotypes.vcf.gz.tbi",
+    benchmark:
+        "run_times/merge_by_sample/all_callers_merged_genotypes.tsv"
+    params:
+        v=outputDir + "ensemble/all_callers_merged_genotypes.vcf",
+    conda:
+        "../envs/environment.yaml"
+    shell:
+        "python3 scripts/genotype_union.py {input} {params.v};"
+        "bgzip {params.v}; tabix -p vcf {output.g}"

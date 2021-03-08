@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+# Authors: Shalabh Suman, Bari Ballew, Wendy Wong
+
+import os
+import subprocess
+
+"""DeepVariant module of CGR germline variant calling pipeline
+"""
+
+from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
+
+if clusterMode == "gcp":
+    GS = GSRemoteProvider()
+
+
+rule DV_concatVariantsByChrom:
+    """Concatenating GLnexus merged bcf into single joined genotyped bcf,
+    when the by_chrom option is used
+    """
+    input:
+        vcf=expand("deepVariant/genotyped/DV_variants_{chrom}.bcf", chrom=chromList),
+        idx=expand("deepVariant/genotyped/DV_variants_{chrom}.bcf.csi", chrom=chromList),
+    output:
+        temp("deepVariant/genotyped/DV_variants.bcf"),
+    benchmark:
+        "run_times/DV_concatVariantsByChrom/concatVariantsByChrom.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "bcftools concat -Ou -a {input.vcf} > {output}"
+
+
+rule DV_indexBCFByChrom:
+    input:
+        bcf="deepVariant/genotyped/DV_variants_{chrom}.bcf",
+    output:
+        idx="deepVariant/genotyped/DV_variants_{chrom}.bcf.csi",
+    benchmark:
+        "run_times/DV_indexBCFByChrom/{chrom}.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "bcftools index {input.bcf}"
+
+
+rule DV_concat_vcfs:
+    """Concatenate vcfs
+    """
+    input:
+        vcf=expand("deepVariant/called/{chrom}/{{sample}}.vcf.gz", chrom=chromList),
+        idx=expand("deepVariant/called/{chrom}/{{sample}}.vcf.gz.tbi", chrom=chromList),
+    output:
+        gz="deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz",
+    params:
+        temp(directory("DV_concat_vcfs/{sample}/")),
+    benchmark:
+        "run_times/DV_concat_vcfs/{sample}.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "mkdir -p {params}; bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output.gz}" # sort -k1,1 -k2,2n > {output}'
+
+
+rule DV_create_each_sample_manifest:
+    """Create list of files for GLnexus to merge
+    Needed to break up into two steps (individual manifest,
+    then merging to cohort manifest) to work around command
+    line character limits when run at scale.
+    """
+    input:
+        "deepVariant/called/{chrom}/{sample}.g.vcf.gz" if by_chrom else "deepVariant/called_by_sample/{sample}.g.vcf.gz",
+    output:
+        temp("deepVariant/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
+            "deepVariant/called/gvcfs/{sample}_manifest.txt"
+        ),
+    benchmark:
+        "run_times/DV_create_each_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else "run_times/DV_create_sample_manifest/{sample}_manifest.tsv"
+    shell:
+        "echo {input} > {output}"
+
+
+rule DV_create_cohort_manifest:
+    input:
+        expand(
+            "deepVariant/called/manifests/{{chrom}}/{sample}_manifest.txt", sample=sampleList
+        ) if by_chrom else expand(
+            "deepVariant/called/gvcfs/{sample}_manifest.txt", sample=sampleList
+        ),
+    output:
+        "deepVariant/called/gvcfs/manifest_{chrom}.txt" if by_chrom else "deepVariant/called/gvcfs/manifest.txt",
+    benchmark:
+        "run_times/DV_create_cohort_manifest/{chrom}_manifest.tsv" if by_chrom else "run_times/DV_create_cohort_manifest/manifest.tsv"
+    params:
+        manDir=(
+            outputDir + "deepVariant/called/manifests/{chrom}/"
+            if by_chrom
+            else outputDir + "deepVariant/called/gvcfs/"
+        ),
+    shell:
+        "for i in {params.manDir}*.txt; do cat $i >> {output}; done"
+
+
+rule DV_GLmerge_gvcfs:
+    """Merge gvcfs into one multi-sample vcf
+
+    "The glnexus_cli executable consumes the gVCF files, and a three-column
+    BED file giving the genomic ranges to analyze. For exomes, the BED file
+    might contain the exome capture targets with some padding, while for
+    WGS you can just give the full-length chromosomes."
+
+    Are shards are equivalent regions across samples?  Probably not?
+    Then can't parallelize by shard here.  Do we need parallelization?
+    If so, should we first split by region?
+
+    GLnexus outputs uncompressed bcf.
+
+    GLnexus creates a directory called "GLnexus.DB" in the working directory.  Track?
+    If this step fails, then the database GLnexus.DB already exists, and resuming
+    the pipeline will result in an error.  Add a timestamp?
+
+    Now that we have Strelka as well we can't have the "GLnexus.DB" in the working directory.
+    Changing the working directory in the command line (and borrowing dt from HaplotypeCaller)
+
+    """
+    input:
+        l=(
+            expand("deepVariant/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList)
+            if by_chrom
+            else expand("deepVariant/called_by_sample/{sample}.g.vcf.gz", sample=sampleList)
+        ),
+        m=(
+            "deepVariant/called/gvcfs/manifest_{chrom}.txt"
+            if by_chrom
+            else "deepVariant/called/gvcfs/manifest.txt"
+        ),
+        b="split_regions/{chrom}.bed" if by_chrom else bedFile,
+    output:
+        temp("deepVariant/genotyped/DV_variants_{chrom}.bcf") if by_chrom else temp(
+            "deepVariant/genotyped/DV_variants.bcf"
+        ),
+    params:
+        workDir="DV_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else "DV_GLmerge_gvcfs/all_chrs",
+    benchmark:
+        "run_times/DV_GLmerge_gvcfs/{chrom}/DV_GLmerge_gvcfs.tsv" if by_chrom else "run_times/DV_GLmerge_gvcfs/DV_GLmerge_gvcfs.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
+        "wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli; chmod +x glnexus_cli;"
+        "./glnexus_cli --config DeepVariant --dir {params.workDir}/GLnexus.DB  --bed {input.b} --list {input.m} > {output}"
+
+
+rule DV_compress_merged_vcfs:
+    """
+    Ading --min-ac 1 here so that no calls after GLnexus merge are not in the final output
+    """
+    input:
+        "deepVariant/genotyped/DV_variants.bcf",
+    output:
+        gz=protected("deepVariant/genotyped/DV_variants.vcf.gz"),
+        tbi=protected("deepVariant/genotyped/DV_variants.vcf.gz.tbi"),
+    benchmark:
+        "run_times/DV_compress_merged_vcfs/DV_variants.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "bcftools view --min-ac 1 {input} | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
+
+
+rule DV_run_deepvariant:
+    input:
+        ref=path_sanitize(refGenome),
+        ref_index=path_sanitize(refGenome) + ".fai",
+        bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
+        bai=lambda wc: path_sanitize(sample2bam[wc.sample]) + ".bai",
+        bed="split_regions/{chrom}.bed" if by_chrom else bedFile,
+    output:
+        vcf=(
+            "deepVariant/called/{chrom}/{sample}.vcf.gz"
+            if by_chrom
+            else "deepVariant/called_by_sample/{sample}.vcf.gz"
+        ),
+        vcf_tbi=(
+            "deepVariant/called/{chrom}/{sample}.vcf.gz.tbi"
+            if by_chrom
+            else "deepVariant/called_by_sample/{sample}.vcf.gz.tbi"
+        ),
+        gvcf=(
+            "deepVariant/called/{chrom}/{sample}.g.vcf.gz"
+            if by_chrom
+            else "deepVariant/called_by_sample/{sample}.g.vcf.gz"
+        ),
+        gvcf_tbi=(
+            "deepVariant/called/{chrom}/{sample}.g.vcf.gz.tbi"
+            if by_chrom
+            else "deepVariant/called_by_sample/{sample}.g.vcf.gz.tbi"
+        ),
+    params:
+        model_type=model_type,
+        sm=lambda wc: sample2sm[wc.sample],
+        threads=threads,
+        split_inputs=" ".join(str(x) for x in range(0, int(threads))),
+        tmp_dir="DV_run_deepvariant_TMP",
+        log_dir=outputDir + "/logs",
+        model_dir=get_DV_model_path(model_type),
+    resources:
+        machine_type="n1-standard-8",
+    benchmark:
+        "run_times/DV_run_deepvariant/{chrom}/{sample}.tsv" if by_chrom else "run_times/DV_run_deepvariant/{sample}.tsv"
+    conda:
+        "../envs/deepvariant.yaml"
+    singularity:
+        "docker://google/deepvariant:1.0.0"
+    log:
+        "logs/DV_run_deepvariant/DV_run_deepvariant.{chrom}.{sample}.log" if by_chrom else "logs/DV_run_deepvariant/DV_run_deepvariant.{sample}.log",
+    shell:
+        "/opt/deepvariant/bin/run_deepvariant \
+                                --model_type={params.model_type} \
+                                --ref={input.ref}  \
+                                --reads={input.bam} \
+                                --regions {input.bed} \
+                                --sample_name {params.sm} \
+                                --output_vcf={output.vcf} \
+                                --output_gvcf={output.gvcf} \
+                                --num_shards={params.threads}"
+
+
+#    shell:
+#        "rm -rf DV_run_deepvariant_TMP; mkdir DV_run_deepvariant_TMP;"
+#        "BIN_DIR=$(ls -d $CONDA_PREFIX/share/deepvariant*/binaries/DeepVariant/*/DeepVariant*);"
+#        "MODEL_DIR=$(ls -d $CONDA_PREFIX/share/deepvariant*/models/DeepVariant/*/DeepVariant*{model_type}_standard);"
+#        "parallel --eta --halt 2 --joblog {params.log_dir}/DV_run_deepvariant_joblog --res {params.log_dir} "
+#        "python $BIN_DIR/make_examples.zip "
+#        "--mode calling --ref {input.ref} --reads {input.bam} "
+#        "--regions {input.bed} "
+#        "--examples {params.tmp_dir}/{params.sm}.tfrecord@{params.threads}.gz "
+#        "--gvcf {params.tmp_dir}/{params.sm}.gvcf.tfrecord@{params.threads}.gz "
+#        "--task {{}} "
+#        "::: {params.split_inputs} ;"
+#        "python $BIN_DIR/call_variants.zip "
+#        "--outfile {params.tmp_dir}/{params.sm}.tmp --examples {params.tmp_dir}/{params.sm}.tfrecord@{params.threads}.gz "
+#        "--checkpoint {params.model_dir}/model.ckpt;"
+#        "python $BIN_DIR/postprocess_variants.zip "
+#        "--ref {input.ref} "
+#        "--infile {params.tmp_dir}/{params.sm}.tmp "
+#        "--outfile {output.vcf} "
+#        "--nonvariant_site_tfrecord_path {params.tmp_dir}/{params.sm}.gvcf.tfrecord@{params.threads}.gz "
+"--gvcf_outfile {output.gvcf}"
