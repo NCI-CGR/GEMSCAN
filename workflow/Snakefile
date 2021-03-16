@@ -1,4 +1,5 @@
-'''Joint variant calling with GATK HaplotypeCaller, Google DeepVariant and Illumina Strelka2. 
+'''
+Joint variant calling with GATK HaplotypeCaller, Google DeepVariant and Illumina Strelka2. 
 
 Notes:
     This pipeline is for use with the production germline pipeline.
@@ -25,7 +26,7 @@ from datetime import datetime
 from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
 
 # reference the config file
-configfile: "config.yaml"
+configfile: "../config/config.yaml"
 report: 'report/workflow.rst'
 
 # import variables from the config file
@@ -50,24 +51,23 @@ def get_sm_tag(bam):
         command = 'samtools view -H ' + bam + ' | grep "^@RG" | grep -Eo "SM[^[:space:]]+" | cut -d":" -f2 | uniq'
         sm = subprocess.check_output(command, shell=True).decode('ascii').rstrip()
         return sm
-        
+
 def get_bam(wildcards):
     bam = wildcards.sample + ".bam"
     return(bam)  
-    
+
 def get_bam_index(wildcards):
     bam = sample2bam[wildcards.sample]
     return(bam + '.bai')    
-    
+
 def path_sanitize(path):
     if clusterMode == "gcp":
         return GS.remote(path)
     else:
         return path
-   
 
 if dv_mode:
-    modelPath = config['modelPath']
+    #modelPath = config['modelPath']
     #useShards = config['useShards']
     model_type = config['model_type']
 
@@ -135,34 +135,36 @@ def get_DV_model_path(model_type):
     return model_path    
 
 if strelka2_mode and not dv_mode and not hc_mode:
-    include: 'scripts/Snakefile_Strelka2'
+    include: 'rules/Snakefile_Strelka2'
     rule all:
         input:
             'strelka2/genotyped/strelka2_variants.vcf.gz'
+
 if hc_mode and not dv_mode and not strelka2_mode:
-    include: 'scripts/Snakefile_HaplotypeCaller'
+    include: 'rules/Snakefile_HaplotypeCaller'
     rule all:
         input:
             'HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz'
+
 if dv_mode and not hc_mode and not strelka2_mode:
-    include: 'scripts/Snakefile_DeepVariant'
-    rule all: 
+    include: 'rules/Snakefile_DeepVariant'
+    rule all:
         input:
             expand('deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz', sample=sampleList) if by_chrom else expand('deepVariant/called_by_sample/{sample}.vcf.gz', sample=sampleList),
             'deepVariant/genotyped/DV_variants.vcf.gz'
             #'deepVariant/called/chr22/HG002.SequelII.merged_15kb_20kb.pbmm2.GRCh38.haplotag.10x.vcf.gz'
 if hc_mode and dv_mode and not har_mode:
-    include: 'scripts/Snakefile_HaplotypeCaller'
-    include: 'scripts/Snakefile_DeepVariant'
+    include: 'rules/Snakefile_HaplotypeCaller'
+    include: 'rules/Snakefile_DeepVariant'
     rule all:
         input:
             'HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz',
             expand('deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz', sample=sampleList) if by_chrom else expand('deepVariant/called_by_sample/{sample}.vcf.gz', sample=sampleList),
             'deepVariant/genotyped/DV_variants.vcf.gz'
 if hc_mode and dv_mode and strelka2_mode and not har_mode:
-    include: 'scripts/Snakefile_HaplotypeCaller'
-    include: 'scripts/Snakefile_DeepVariant'
-    include: 'scripts/Snakefile_Strelka2'
+    include: 'rules/Snakefile_HaplotypeCaller'
+    include: 'rules/Snakefile_DeepVariant'
+    include: 'ruless/Snakefile_Strelka2'
     rule all:
         input:
             'HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz',
@@ -170,10 +172,10 @@ if hc_mode and dv_mode and strelka2_mode and not har_mode:
             'deepVariant/genotyped/DV_variants.vcf.gz',   
             'strelka2/genotyped/strelka2_variants.vcf.gz'
 if hc_mode and dv_mode and strelka2_mode and har_mode:
-    include: 'scripts/Snakefile_HaplotypeCaller'
-    include: 'scripts/Snakefile_DeepVariant'
-    include: 'scripts/Snakefile_Strelka2'
-    include: 'scripts/Snakefile_harmonize'
+    include: 'rules/Snakefile_HaplotypeCaller'
+    include: 'rules/Snakefile_DeepVariant'
+    include: 'rules/Snakefile_Strelka2'
+    include: 'rules/Snakefile_harmonize'
     rule all:
         input:
             expand('deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz', sample=list(sample2bam.keys()) ) if by_chrom else expand('deepVariant/called_by_sample/{sample}.vcf.gz', sample=sampleList),
