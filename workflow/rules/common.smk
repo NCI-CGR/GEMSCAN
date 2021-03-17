@@ -1,20 +1,46 @@
-from snakemake.utils import validate
-import pandas as pd
+#!/usr/bin/env python3
 
+import os
+import subprocess
 
-# this container defines the underlying OS for each job when using the workflow
-# with --use-conda --use-singularity
-singularity: "docker://continuumio/miniconda3"
+from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
 
+if clusterMode == "gcp":
+    GS = GSRemoteProvider()
 
-##### load config and sample sheets #####
+rule split_bed_file:
+    '''
+    Separates bed regions by chromosome.
 
+    For DV:
+    If you're not assigning a number of shards by which to divide
+    and parallelize, then the pipeline will parallelize by chrom.
+    To do this, we take the bed file (e.g. exome capture region)
+    and split the regions by chromosome.  Subsequent steps are run
+    concurrently on each of the single-chromosome bed files.
 
-configfile: "config/config.yaml"
+    For GATK:
+    HaplotypeCaller can't be parallelized per task (e.g. threads),
+    so must be run over sub-regions if you want parallelization.
+    **Do we want to use the old 4000-region bed file, or is by-chrom
+    sufficient?
 
+    Note that grep exits with 0 if a match is found, 1 if no match,
+    and 2 if error.  Snakemake looks for exit codes of 0 to determine
+    that a job finished successfully.  No match is an acceptable outcome
+    here, so the shell command below should allow match or no match.
 
-validate(config, schema="../schemas/config.schema.yaml")
-
-samples = pd.read_csv(config["samples"], sep="\t").set_index("sample", drop=False)
-samples.index.names = ["sample_id"]
-validate(samples, schema="../schemas/samples.schema.yaml")
+    don't love the || true solution; what will it do for exit > 1?
+    '''
+    input:
+        bed = GS.remote(bedFile) if clusterMode == "gcp" else bedFile
+    output:
+        bed =  'split_regions/{chrom}.bed'
+    benchmark:
+        'run_times/split_bed_file/{chrom}.tsv'
+    conda:
+        "envs/environment.yaml"  
+    log:
+        "logs/split_bed_file/split_bed_file.{chrom}.log"     
+    shell:
+        'grep "^{wildcards.chrom}[[:space:]]" {input.bed} > {output.bed} || true'
