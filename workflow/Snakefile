@@ -28,6 +28,9 @@ from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
 # reference the config file
 configfile: "../config/config.yaml"
 report: 'report/workflow.rst'
+    
+#including the common functions
+include: "rules/common.smk"
 
 
 # import variables from the config file
@@ -46,26 +49,6 @@ outputDir = config['outputDir']
 if clusterMode == "gcp":
     GS = GSRemoteProvider()
 
-
-def get_sm_tag(bam): 
-    if Path(bam).is_file():
-        command = 'samtools view -H ' + bam + ' | grep "^@RG" | grep -Eo "SM[^[:space:]]+" | cut -d":" -f2 | uniq'
-        sm = subprocess.check_output(command, shell=True).decode('ascii').rstrip()
-        return sm
-
-def get_bam(wildcards):
-    bam = wildcards.sample + ".bam"
-    return(bam)  
-
-def get_bam_index(wildcards):
-    bam = sample2bam[wildcards.sample]
-    return(bam + '.bai')    
-
-def path_sanitize(path):
-    if clusterMode == "gcp":
-        return GS.remote(path)
-    else:
-        return path
 
 if dv_mode:
     #modelPath = config['modelPath']
@@ -91,52 +74,28 @@ dictionaryFile = refDir + '/' + refNoExt + '.dict'
 dt = str(datetime.now().strftime("%y-%m-%d-%H-%M"))
 #dt = str(config['dt'])
 
-#fix this later
-bamList = config['inputBamsList']
-
-# read samples file
-#samplesFile = config['samplesFile']
-#with open('samplesFile') as f:
-#    bamList = [line.rstrip() for line in f]
+#get the list of bam files, assuming that .bai are in the same folder
+bamList = get_samples("../config/samples.txt")
 
 # generate sampleList based on bam filenames and then we generate the sample to bam dict
 sampleList = [os.path.splitext(os.path.basename(f))[0] for f in bamList]
 sample2bam = dict(zip(sampleList, bamList))
 
 # generate sample names list from bam SM tags and then generate the sample to sm tag dic
-# get_all_sm_tag = lambda x: get_sm_tag(x)
-# smList = list(map(get_all_sm_tag, bamList))
+#get_all_sm_tag = lambda x: get_sm_tag(x)
+#smList = list(map(get_all_sm_tag, bamList))
 
-
+#temp solution of using filename as sample names
+#will add option to allow user input sample names
 sample2sm =  dict(zip(sampleList, sampleList))
 
 # read in chromosome list from reference dict file (assumes the dict is already created)
 # this circumvents the issue of whether to use hg19-style or b37-style chromosome annotation
 # as it just pulls the chromosome names directly from the dict index.
-chromList = config['chromsList'] 
+chromList = get_chrom_names(dictionaryFile)
 
-
-def get_DBImport_path1(wildcards):
-    return(glob.glob('HaplotypeCaller/DBImport/' +  wildcards.chrom + '/' + wildcards.chrom + '*/genomicsdb_meta_dir/genomicsdb_meta*.json'))
-
-def get_DBImport_path2(wildcards):
-    path = ''.join(glob.glob('HaplotypeCaller/DBImport/' + wildcards.chrom + '/*/__*/'))
-    myList = []
-    if os.path.exists(path):
-        myList = ['AD.tdb', 'AD_var.tdb', 'ALT.tdb', 'ALT_var.tdb', 'BaseQRankSum.tdb', '__book_keeping.tdb.gz', '__coords.tdb', 'DP_FORMAT.tdb', 'DP.tdb', 'DS.tdb', 'END.tdb', 'ExcessHet.tdb', 'FILTER.tdb', 'FILTER_var.tdb', 'GQ.tdb', 'GT.tdb', 'GT_var.tdb', 'ID.tdb', 'ID_var.tdb', 'InbreedingCoeff.tdb', 'MIN_DP.tdb', 'MLEAC.tdb', 'MLEAC_var.tdb', 'MLEAF.tdb', 'MLEAF_var.tdb', 'MQRankSum.tdb', 'PGT.tdb', 'PGT_var.tdb', 'PID.tdb', 'PID_var.tdb', 'PL.tdb', 'PL_var.tdb', 'QUAL.tdb', 'RAW_MQandDP.tdb', 'ReadPosRankSum.tdb', 'REF.tdb', 'REF_var.tdb', 'SB.tdb', '__tiledb_fragment.tdb']
-        myList = [path + file for file in myList]
-    return(myList)
-
-def get_DV_model_path(model_type):
-    if clusterMode == "gcp":
-        model_path = os.system("ls -d $CONDA_PREFIX/share/deepvariant*/models/DeepVariant/*/DeepVariant*" + 
-                   model_type + "_standard")
-    else:
-        model_path =  modelPath + "/DeepVariant-inception_v3-1.0.0+data-" + model_type + "_standard/"
-    return model_path    
-
-#include
-include: "rules/common.smk"
+#including preprocessing rules
+include: "rules/Snakefile_preprocess"
 
 
 if strelka2_mode and not dv_mode and not hc_mode:
