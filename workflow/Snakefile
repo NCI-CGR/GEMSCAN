@@ -116,7 +116,8 @@ if dv_mode and not hc_mode and not strelka2_mode:
         input:
             expand('deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz', sample=sampleList) if by_chrom else expand('deepVariant/called_by_sample/{sample}.vcf.gz', sample=sampleList),
             'deepVariant/genotyped/DV_variants.vcf.gz'
-            #'deepVariant/called/chr22/HG002.SequelII.merged_15kb_20kb.pbmm2.GRCh38.haplotag.10x.vcf.gz'
+            
+            
 if hc_mode and dv_mode and not har_mode:
     include: 'rules/Snakefile_HaplotypeCaller'
     include: 'rules/Snakefile_DeepVariant'
@@ -125,6 +126,7 @@ if hc_mode and dv_mode and not har_mode:
             'HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz',
             expand('deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz', sample=sampleList) if by_chrom else expand('deepVariant/called_by_sample/{sample}.vcf.gz', sample=sampleList),
             'deepVariant/genotyped/DV_variants.vcf.gz'
+            
 if hc_mode and dv_mode and strelka2_mode and not har_mode:
     include: 'rules/Snakefile_HaplotypeCaller'
     include: 'rules/Snakefile_DeepVariant'
@@ -135,6 +137,7 @@ if hc_mode and dv_mode and strelka2_mode and not har_mode:
             expand('deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz', sample=sampleList) if by_chrom else expand('deepVariant/called_by_sample/{sample}.vcf.gz', sample=sampleList),
             'deepVariant/genotyped/DV_variants.vcf.gz',   
             'strelka2/genotyped/strelka2_variants.vcf.gz'
+            
 if hc_mode and dv_mode and strelka2_mode and har_mode:
     include: 'rules/Snakefile_HaplotypeCaller'
     include: 'rules/Snakefile_DeepVariant'

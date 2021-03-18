@@ -15,25 +15,17 @@ rule HC_call_variants:
     Runs over each chrom in parallel if by_chrom is true
     """
     input:
-        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
-        i1=GS.remote(refGenome + ".amb") if clusterMode == "gcp" else refGenome + ".amb",
-        i2=GS.remote(refGenome + ".ann") if clusterMode == "gcp" else refGenome + ".ann",
-        i3=GS.remote(refGenome + ".bwt") if clusterMode == "gcp" else refGenome + ".bwt",
-        i4=GS.remote(refGenome + ".pac") if clusterMode == "gcp" else refGenome + ".pac",
-        i5=GS.remote(refGenome + ".sa") if clusterMode == "gcp" else refGenome + ".sa",
-        i6=GS.remote(refGenome + ".fai") if clusterMode == "gcp" else refGenome + ".fai",
-        i7=GS.remote(dictionaryFile) if clusterMode == "gcp" else dictionaryFile,
+        ref=path_sanitize(refGenome),
+        i1=path_sanitize(refGenome) + ".amb",
+        i2=path_sanitize(refGenome) + ".ann",
+        i3=path_sanitize(refGenome + ".bwt",
+        i4=path_sanitize(refGenome + ".pac",
+        i5=path_sanitize(refGenome + ".sa",
+        i6=path_sanitize(refGenome + ".fai,
+        i7=path_sanitize(dictionaryFile),
         bed="split_regions/{chrom}.bed" if by_chrom else bedFile,
-        bam=(
-            lambda wc: GS.remote(sample2bam[wc.sample])
-            if clusterMode == "gcp"
-            else lambda wc: sample2bam[wc.sample]
-        ),
-        bai=(
-            lambda wc: GS.remote(sample2bam[wc.sample] + ".bai")
-            if clusterMode == "gcp"
-            else lambda wc: GS.remote(sample2bam[wc.sample])
-        ),
+        bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
+        bai=lambda wc: path_sanitize(sample2bam[wc.sample] + ".bai"
     output:
         gvcf=(
             temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf")
@@ -44,11 +36,17 @@ rule HC_call_variants:
             temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx")
             if by_chrom
             else temp("HaplotypeCaller/called/{sample}.g.vcf.idx")
-        ),
+        )
+    resources:
+        machine_type="n1-standard-8",
+        runtime=2880,
+        mem_mb=8000
+    threads: 4    
     benchmark:
         "run_times/HC_call_variants/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_call_variants/{sample}.tsv"
     conda:
         "../envs/gatk4.yaml"
+    singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'     
     shell:
         'gatk --java-options "-Xmx8G" HaplotypeCaller \
                                     -R {input.ref} \
@@ -84,6 +82,7 @@ rule HC_compress_gvcfs:
         ),
     benchmark:
         "run_times/HC_compress_gvcfs/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_compress_gvcfs/{sample}.tsv"
+    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"     
     conda:
         "../envs/environment.yaml"
     shell:
@@ -108,6 +107,7 @@ rule HC_concat_gvcfs:
         "run_times/HC_concat_gvcfs/{sample}.tsv"
     conda:
         "../envs/gatk4.yaml"
+    singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'     
     shell:
         'gatk --java-options "-Xmx4G" GatherVcfs -I {params.gvcfList} -O {output.gz}'
 
@@ -121,6 +121,7 @@ rule HC_index_gvcf:
         "run_times/HC_index_gvcf/{sample}.tsv"
     conda:
         "../envs/environment.yaml"
+    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
     shell:
         "tabix -p vcf {input}"
 
@@ -153,6 +154,7 @@ rule HC_create_each_sample_map_file:
         "run_times/create_sample_map/{sample}.tsv"
     conda:
         "../envs/environment.yaml"
+    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"       
     shell:
         "n=$(bcftools query -l {input.gvcf});"
         'echo "${{n}}\t{input.gvcf}" > {output}'
@@ -224,6 +226,7 @@ rule combine_gvcfs:
         mem_mb=1024,
     conda:
         "../envs/gatk4.yaml"
+    singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'    
     shell:
         'gatk --java-options "-Xmx20G" CombineGVCFs \
                                 {params.gvcf} \
@@ -233,15 +236,15 @@ rule combine_gvcfs:
 
 rule HC_genotype_gvcfs:
     input:
-        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
-        i1=GS.remote(refGenome + ".amb") if clusterMode == "gcp" else refGenome + ".amb",
-        i2=GS.remote(refGenome + ".ann") if clusterMode == "gcp" else refGenome + ".ann",
-        i3=GS.remote(refGenome + ".bwt") if clusterMode == "gcp" else refGenome + ".bwt",
-        i4=GS.remote(refGenome + ".pac") if clusterMode == "gcp" else refGenome + ".pac",
-        i5=GS.remote(refGenome + ".sa") if clusterMode == "gcp" else refGenome + ".sa",
-        i6=GS.remote(refGenome + ".fai") if clusterMode == "gcp" else refGenome + ".fai",
-        i7=GS.remote(dictionaryFile) if clusterMode == "gcp" else dictionaryFile,
-        bed=GS.remote(bedFile) if clusterMode == "gcp" else bedFile,
+        ref=path_sanitize(refGenome),
+        i1=path_sanitize(refGenome) + ".amb",
+        i2=path_sanitize(refGenome) + ".ann",
+        i3=path_sanitize(refGenome) + ".bwt",
+        i4=path_sanitize(refGenome) + ".pac",
+        i5=path_sanitize(refGenome) + ".sa",
+        i6=path_sanitize(refGenome) + ".fai",
+        i7=path_sanitize(dictionaryFile),
+        bed=path_sanitize(bedFile),
         gvcf="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz",
         idx="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz.tbi",
     output:
@@ -255,6 +258,7 @@ rule HC_genotype_gvcfs:
         mem_mb=1024,
     conda:
         "../envs/gatk4.yaml"
+    singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'    
     shell:
         'gatk --java-options "-Xmx20G" GenotypeGVCFs \
                               -V {input.gvcf} \
@@ -282,6 +286,7 @@ rule HC_concat_vcfs_bcftools:
         "run_times/HC_concat_vcfs_bcftools/HC_variants.tsv"
     conda:
         "../envs/environment.yaml"
+    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"     
     shell:
         "mkdir -p {params.t};"
         "bcftools concat -a {input.vcfList} -Ou | bcftools sort -T {params.t} -Oz -o {output.projectVCF};"

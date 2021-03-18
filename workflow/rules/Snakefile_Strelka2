@@ -50,24 +50,18 @@ rule strelka_bgZipBedFiles:
         "run_times/strelka_bgZipBedFiles/{chrom}.tsv"
     conda:
         "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"    
     shell:
         "bgzip -c {input.bedFile} >{input.bedFile}.gz; tabix -p bed {input.bedFile}.gz;"
 
 
 rule strelka2_callVariant:
     input:
-        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
-        ref_index=GS.remote(refGenome + ".fai") if clusterMode == "gcp" else refGenome + ".fai",
-        bam=(
-            lambda wc: GS.remote(sample2bam[wc.sample])
-            if clusterMode == "gcp"
-            else lambda wc: sample2bam[wc.sample]
-        ),
-        bai=(
-            lambda wc: GS.remote(sample2bam[wc.sample] + ".bai")
-            if clusterMode == "gcp"
-            else lambda wc: GS.remote(sample2bam[wc.sample])
-        ),
+        ref=path_sanitize(refGenome),
+        ref_index=path_sanitize(refGenome) + ".fai",
+        bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
+        bai=lambda wc: path_sanitize(sample2bam[wc.sample]) + ".bai",
         bedFileGZ="split_regions/{chrom}.bed.gz" if by_chrom else bedFileGZ,
         bedFileGZ_index="split_regions/{chrom}.bed.gz.tbi" if by_chrom else bedFileGZ + ".tbi",
     output:
@@ -93,19 +87,23 @@ rule strelka2_callVariant:
         ),
     params:
         runDir=(
-            outputDir + "/strelka2/calledByChrom/{chrom}/{sample}"
+            outputDir + "strelka2/calledByChrom/{chrom}/{sample}"
             if by_chrom
-            else outputDir + "/strelka2/calledBySample/{sample}"
+            else outputDir + "strelka2/calledBySample/{sample}"
         ),
         exome_param=exome_param,
         threads=threads,
         memGB=memGB,
     resources:
         machine_type="n1-standard-8",
+        runtime=2880,
+        mem_mb=memGB*1000
+    threads: 8
     benchmark:
         "run_times/strelka_callVariantByChrom/{chrom}/{sample}.tsv" if by_chrom else "run_times/strelka2_callVariant/{sample}.tsv"
     conda:
         "../envs/strelka.yaml"
+    singularity: 'docker://quay.io/biocontainers/strelka:2.9.10--0'     
     log:
         "logs/strelka2_callVariant/strelka2_callVariant.{chrom}.{sample}.log" if by_chrom else "logs/strelka2_callVariant/strelka2_callVariant.{sample}.log",
     shell:
@@ -127,6 +125,8 @@ rule strelka_concatVariantsByChrom:
         "run_times/strelka_concatVariantsByChrom/concatVariantsByChrom.tsv"
     conda:
         "../envs/environment.yaml"
+    singularity:
+        'docker://quay.io/shukwong/bcftools:2020-12-09'      
     shell:
         "bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output}"
 
@@ -138,6 +138,8 @@ rule strelka_indexBCFByChrom:
         idx="strelka2/genotyped/strelka2_variants_{chrom}.bcf.csi",
     benchmark:
         "run_times/strelka_indexBCFByChrom/{chrom}.tsv"
+    singularity:
+        'docker://quay.io/shukwong/bcftools:2020-12-09'     
     conda:
         "../envs/environment.yaml"
     shell:
@@ -156,6 +158,8 @@ rule Strelka2_compress_merged_vcfs:
         "run_times/strelka2_compress_merged_vcfs/strelka2_variants.tsv"
     conda:
         "../envs/environment.yaml"
+    singularity:
+        'docker://quay.io/shukwong/bcftools:2020-12-09'    
     shell:
         "bcftools view --min-ac 1 {input} | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
 
@@ -178,16 +182,15 @@ rule Strelka2_GLmerge_gvcfs:
             if by_chrom
             else "strelka2/called/gvcfs/manifest.txt"
         ),
-        b=GS.remote(bedFile) if clusterMode == "gcp" else bedFile,
-        glnexusConfig=GS.remote(glnexusConfig) if clusterMode == "gcp" else glnexusConfig,
+        b=path_sanitize(bedFile),
+        glnexusConfig=path_sanitize(glnexusConfig),
     output:
         temp("strelka2/genotyped/strelka2_variants_{chrom}.bcf") if by_chrom else temp(
             "strelka2/genotyped/strelka2_variants.bcf"
         ),
     params:
         workDir=(
-            "Strelka2_GLmerge_gvcfs/" + "{chrom}/" + dt
-            if by_chrom
+            "Strelka2_GLmerge_gvcfs/" + "{chrom}/" + dt if by_chrom
             else "Strelka2_GLmerge_gvcfs/" + dt
         ),
     benchmark:
@@ -196,7 +199,7 @@ rule Strelka2_GLmerge_gvcfs:
         "../envs/environment.yaml"
     shell:
         "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
-        "wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli; chmod +x glnexus_cli;"
+        "if [ ! -f glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli; chmod +x glnexus_cli; fi;"
         "./glnexus_cli --config {input.glnexusConfig} --dir {params.workDir}/GLnexus.DB --bed {input.b} --list {input.m}  > {output}"
 
 
