@@ -68,7 +68,8 @@ CALLERS = ['HC', 'DV', 'strelka2']  # used in harmonize module
 refFile = os.path.basename(refGenome)
 refDir = os.path.dirname(refGenome)
 refNoExt = os.path.splitext(refFile)[0]
-dictionaryFile = refDir + '/' + refNoExt + '.dict'
+#dictionaryFile = refDir + '/' + refNoExt + '.dict'
+dictionaryFile = config['dictionaryFile']
 
 # set a datetime stamp for GATK DBImport step
 dt = str(datetime.now().strftime("%y-%m-%d-%H-%M"))
@@ -92,7 +93,7 @@ sample2sm =  dict(zip(sampleList, sampleList))
 # read in chromosome list from reference dict file (assumes the dict is already created)
 # this circumvents the issue of whether to use hg19-style or b37-style chromosome annotation
 # as it just pulls the chromosome names directly from the dict index.
-chromList = get_chrom_names(dictionaryFile)
+chromList = get_chrom_names(dictionaryFile, bedFile)
 
 #including preprocessing rules
 include: "rules/Snakefile_preprocess"

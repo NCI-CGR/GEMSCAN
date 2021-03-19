@@ -8,9 +8,7 @@ import subprocess
 """
 
 from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
-
-if clusterMode == "gcp":
-    GS = GSRemoteProvider()
+GS = GSRemoteProvider()
 
 
 rule DV_concatVariantsByChrom:
@@ -180,9 +178,9 @@ rule DV_compress_merged_vcfs:
 rule DV_run_deepvariant:
     input:
         ref=path_sanitize(refGenome),
-        ref_index=path_sanitize(refGenome) + ".fai",
+        ref_index=path_sanitize(refGenome + ".fai"),
         bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
-        bai=lambda wc: path_sanitize(sample2bam[wc.sample]) + ".bai",
+        bai=lambda wc: path_sanitize(sample2bam[wc.sample] + ".bai"),
         bed="split_regions/{chrom}.bed" if by_chrom else bedFile,
     output:
         vcf=(
@@ -258,4 +256,4 @@ rule DV_run_deepvariant:
 #        "--infile {params.tmp_dir}/{params.sm}.tmp "
 #        "--outfile {output.vcf} "
 #        "--nonvariant_site_tfrecord_path {params.tmp_dir}/{params.sm}.gvcf.tfrecord@{params.threads}.gz "
-"--gvcf_outfile {output.gvcf}"
+#        "--gvcf_outfile {output.gvcf}"

@@ -2,9 +2,7 @@
 """
 
 from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
-
-if clusterMode == "gcp":
-    GS = GSRemoteProvider()
+GS = GSRemoteProvider()
 
 
 rule strelka2_AddSampleName:
@@ -59,9 +57,9 @@ rule strelka_bgZipBedFiles:
 rule strelka2_callVariant:
     input:
         ref=path_sanitize(refGenome),
-        ref_index=path_sanitize(refGenome) + ".fai",
+        ref_index=path_sanitize(refGenome + ".fai") ,
         bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
-        bai=lambda wc: path_sanitize(sample2bam[wc.sample]) + ".bai",
+        bai=lambda wc: path_sanitize(sample2bam[wc.sample] + ".bai") ,
         bedFileGZ="split_regions/{chrom}.bed.gz" if by_chrom else bedFileGZ,
         bedFileGZ_index="split_regions/{chrom}.bed.gz.tbi" if by_chrom else bedFileGZ + ".tbi",
     output:
@@ -197,10 +195,14 @@ rule Strelka2_GLmerge_gvcfs:
         "run_times/strelka2_GLmerge_gvcfs/{chrom}/GLmerge.tsv" if by_chrom else "run_times/strelka2_GLmerge_gvcfs/GLmerge.tsv"
     conda:
         "../envs/environment.yaml"
+    singularity:
+        'docker://shukwong/glnexus:12012020'     
     shell:
-        "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
-        "if [ ! -f glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli; chmod +x glnexus_cli; fi;"
-        "./glnexus_cli --config {input.glnexusConfig} --dir {params.workDir}/GLnexus.DB --bed {input.b} --list {input.m}  > {output}"
+        '[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};'
+        'glnexus_cli --config {input.glnexusConfig} --dir {params.workDir}/GLnexus.DB --bed {input.b} --list {input.m}  > {output}'
+        #"[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
+        #"if [ ! -f glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli; chmod +x glnexus_cli; fi;"
+        #"./glnexus_cli --config {input.glnexusConfig} --dir {params.workDir}/GLnexus.DB --bed {input.b} --list {input.m}  > {output}"
 
 
 rule strelka2_create_each_sample_manifest:
@@ -233,7 +235,7 @@ rule strelka2_create_cohort_manifest:
         "run_times/strelka2_create_cohort_manifest/{chrom}_manifest.tsv" if by_chrom else "run_times/strelka2_create_cohort_manifest/manifest.tsv"
     params:
         manDir=(
-            outputDir + "/strelka2/called/manifests/{chrom}/"
+            outputDir + "strelka2/called/manifests/{chrom}/"
             if by_chrom
             else outputDir + "strelka2/called/manifests/"
         ),

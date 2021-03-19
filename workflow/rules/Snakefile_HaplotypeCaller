@@ -5,9 +5,7 @@
 """
 
 from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
-
-if clusterMode == "gcp":
-    GS = GSRemoteProvider()
+GS = GSRemoteProvider()
 
 
 rule HC_call_variants:
@@ -16,16 +14,16 @@ rule HC_call_variants:
     """
     input:
         ref=path_sanitize(refGenome),
-        i1=path_sanitize(refGenome) + ".amb",
-        i2=path_sanitize(refGenome) + ".ann",
-        i3=path_sanitize(refGenome + ".bwt",
-        i4=path_sanitize(refGenome + ".pac",
-        i5=path_sanitize(refGenome + ".sa",
-        i6=path_sanitize(refGenome + ".fai,
+        i1=path_sanitize(refGenome + ".amb"),
+        i2=path_sanitize(refGenome + ".ann"),
+        i3=path_sanitize(refGenome + ".bwt"),
+        i4=path_sanitize(refGenome + ".pac"),
+        i5=path_sanitize(refGenome + ".sa"),
+        i6=path_sanitize(refGenome + ".fai"),
         i7=path_sanitize(dictionaryFile),
         bed="split_regions/{chrom}.bed" if by_chrom else bedFile,
         bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
-        bai=lambda wc: path_sanitize(sample2bam[wc.sample] + ".bai"
+        bai=lambda wc: path_sanitize(sample2bam[wc.sample] + ".bai")
     output:
         gvcf=(
             temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf")
@@ -237,12 +235,12 @@ rule combine_gvcfs:
 rule HC_genotype_gvcfs:
     input:
         ref=path_sanitize(refGenome),
-        i1=path_sanitize(refGenome) + ".amb",
-        i2=path_sanitize(refGenome) + ".ann",
-        i3=path_sanitize(refGenome) + ".bwt",
-        i4=path_sanitize(refGenome) + ".pac",
-        i5=path_sanitize(refGenome) + ".sa",
-        i6=path_sanitize(refGenome) + ".fai",
+        i1=path_sanitize(refGenome + ".amb"),
+        i2=path_sanitize(refGenome + ".ann"),
+        i3=path_sanitize(refGenome + ".bwt"),
+        i4=path_sanitize(refGenome + ".pac"),
+        i5=path_sanitize(refGenome + ".sa"),
+        i6=path_sanitize(refGenome + ".fai"),
         i7=path_sanitize(dictionaryFile),
         bed=path_sanitize(bedFile),
         gvcf="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz",

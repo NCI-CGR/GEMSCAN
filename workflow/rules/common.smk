@@ -4,10 +4,8 @@ import os
 import subprocess
 import pandas as pd
 
-#from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
-
-#if clusterMode == "gcp":
-#    GS = GSRemoteProvider()
+from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
+GS = GSRemoteProvider()
 
 # The pipeline will terminate with an error without .bai files
 # The assumption is enforced in input to DV, HC and Strelka2 calling rules
@@ -34,7 +32,7 @@ def get_bam_index(wildcards):
 def path_sanitize(path):
     if path.startswith( 'gs://' ):
         gs_path = path.replace("gs://", "")
-        return GS.remote(gs_path)
+        return GS.remote(gs_path, keep_local=True)
     else:
         return path  
 
@@ -60,7 +58,7 @@ def get_DV_model_path(model_type):
 # read in chromosome list from reference dict file (assumes the dict is already created)
 # this circumvents the issue of whether to use hg19-style or b37-style chromosome annotation
 # as it just pulls the chromosome names directly from the dict index.    
-def get_chrom_names(dictionaryFile):
+def get_chrom_names(dictionaryFile, bedFile):
     chromList = []
     with open(dictionaryFile) as f:
         next(f)
