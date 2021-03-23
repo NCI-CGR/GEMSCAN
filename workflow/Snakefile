@@ -68,8 +68,8 @@ CALLERS = ['HC', 'DV', 'strelka2']  # used in harmonize module
 refFile = os.path.basename(refGenome)
 refDir = os.path.dirname(refGenome)
 refNoExt = os.path.splitext(refFile)[0]
-#dictionaryFile = refDir + '/' + refNoExt + '.dict'
-dictionaryFile = config['dictionaryFile']
+dictionaryFile = refDir + '/' + refNoExt + '.dict'
+#dictionaryFile = config['dictionaryFile']
 
 # set a datetime stamp for GATK DBImport step
 dt = str(datetime.now().strftime("%y-%m-%d-%H-%M"))
@@ -119,23 +119,13 @@ if dv_mode and not hc_mode and not strelka2_mode:
             'deepVariant/genotyped/DV_variants.vcf.gz'
             
             
-if hc_mode and dv_mode and not har_mode:
-    include: 'rules/Snakefile_HaplotypeCaller'
-    include: 'rules/Snakefile_DeepVariant'
-    rule all:
-        input:
-            'HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz',
-            expand('deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz', sample=sampleList) if by_chrom else expand('deepVariant/called_by_sample/{sample}.vcf.gz', sample=sampleList),
-            'deepVariant/genotyped/DV_variants.vcf.gz'
-            
 if hc_mode and dv_mode and strelka2_mode and not har_mode:
     include: 'rules/Snakefile_HaplotypeCaller'
     include: 'rules/Snakefile_DeepVariant'
-    include: 'ruless/Snakefile_Strelka2'
+    include: 'rules/Snakefile_Strelka2'
     rule all:
         input:
             'HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz',
-            expand('deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz', sample=sampleList) if by_chrom else expand('deepVariant/called_by_sample/{sample}.vcf.gz', sample=sampleList),
             'deepVariant/genotyped/DV_variants.vcf.gz',   
             'strelka2/genotyped/strelka2_variants.vcf.gz'
             
@@ -146,7 +136,6 @@ if hc_mode and dv_mode and strelka2_mode and har_mode:
     include: 'rules/Snakefile_harmonize'
     rule all:
         input:
-            expand('deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz', sample=list(sample2bam.keys()) ) if by_chrom else expand('deepVariant/called_by_sample/{sample}.vcf.gz', sample=sampleList),
             'ensemble/all_callers_merged_genotypes.vcf.gz',
             'ensemble/all_callers_merged_genotypes.vcf.gz.tbi'
 

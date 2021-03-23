@@ -175,15 +175,15 @@ rule HC_create_cohort_map_file:
 
 rule combine_gvcfs:
     input:
-        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
-        i1=GS.remote(refGenome + ".amb") if clusterMode == "gcp" else refGenome + ".amb",
-        i2=GS.remote(refGenome + ".ann") if clusterMode == "gcp" else refGenome + ".ann",
-        i3=GS.remote(refGenome + ".bwt") if clusterMode == "gcp" else refGenome + ".bwt",
-        i4=GS.remote(refGenome + ".pac") if clusterMode == "gcp" else refGenome + ".pac",
-        i5=GS.remote(refGenome + ".sa") if clusterMode == "gcp" else refGenome + ".sa",
-        i6=GS.remote(refGenome + ".fai") if clusterMode == "gcp" else refGenome + ".fai",
-        i7=GS.remote(dictionaryFile) if clusterMode == "gcp" else dictionaryFile,
-        bed=GS.remote(bedFile) if clusterMode == "gcp" else bedFile,
+        ref=path_sanitize(refGenome),
+        i1=path_sanitize(refGenome + ".amb"),
+        i2=path_sanitize(refGenome + ".ann"),
+        i3=path_sanitize(refGenome + ".bwt"),
+        i4=path_sanitize(refGenome + ".pac"),
+        i5=path_sanitize(refGenome + ".sa"),
+        i6=path_sanitize(refGenome + ".fai"),
+        i7=path_sanitize(dictionaryFile),
+        bed=path_sanitize(bedFile),
         gvcf=(
             expand("HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz", sample=sampleList)
             if by_chrom
@@ -221,12 +221,14 @@ rule combine_gvcfs:
     log:
         "logs/gatk/combinegvcfs.log",
     resources:
-        mem_mb=1024,
+        runtime=2880,
+        mem_mb=2048
+    threads: 4
     conda:
         "../envs/gatk4.yaml"
-    singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'    
+    singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09' 
     shell:
-        'gatk --java-options "-Xmx20G" CombineGVCFs \
+        'gatk --java-options "-Xmx16G" CombineGVCFs \
                                 {params.gvcf} \
                                 -R {input.ref} \
                                 -O {output.gvcf} '
@@ -253,7 +255,7 @@ rule HC_genotype_gvcfs:
     params:
         interval="{chrom}",
     resources:
-        mem_mb=1024,
+        mem_mb=2048
     conda:
         "../envs/gatk4.yaml"
     singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'    
