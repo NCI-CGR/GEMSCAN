@@ -1,0 +1,6 @@
+{
+    "SBATCH_DEFAULTS": "output=logs/germlineSmallVariantPipeline.%j",
+    "CLUSTER_NAME": "",
+    "CLUSTER_CONFIG": "",
+    "ADVANCED_ARGUMENT_CONVERSION": "yes"
+}
