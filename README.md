@@ -46,7 +46,12 @@ Execute the workflow locally via
 
 using `$N` cores or run it in a cluster environment via
 
-    snakemake --use-conda --cluster qsub --jobs 100
+    snakemake --use-singularity --cluster qsub --jobs 100
+    
+run it with google lifesciences pipeline via (note that the --google-lifesciences does not support singularity)
+    
+    export GOOGLE_APPLICATION_CREDENTIALS="path/to/your/credentials.json"
+    snakemake --google-lifesciences --default-remote-prefix <googleBucketForOutputs> --use-conda  --jobs 100
 
 See the [Snakemake documentation](https://snakemake.readthedocs.io/en/stable/executable.html) for further details.
 
