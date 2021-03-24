@@ -4,9 +4,9 @@ outputDir: 'path/to/outputdir'
 
 clusterMode: 'cluster' or 'gcp'
 
-refGenome: '/DCEG/Projects/CoherentLogic/data/GIAB/bams/ref/GRCh38_full_plus_hs38d1_analysis_set_minus_alts.fa'
-bedFile: '/DCEG/Projects/CoherentLogic/data/GIAB/bams/ref/GRCh38_noChrM.bed'
-bedFileGZ: '/DCEG/Projects/CoherentLogic/data/GIAB/bams/ref/GRCh38_noChrM.bed.gz'
+refGenome: 'path/to/ref/fasta'
+bedFile: 'path/to/bedfile'
+bedFileGZ: '/path/to/gzippedBedFile'
 
 runMode:
   streka2: FALSE
