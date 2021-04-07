@@ -10,7 +10,9 @@ __options__:
     - "job_class"
 
 __default__:
-  queue: xlong.q
-  join: yes
+  queue: long.q
+  join: "yes"
+  export_env: ""
+  pe: "by_node 8"
   output: logs/sge/snakejob.{rulename}.{jobid}.log
   error: logs/sge/snakejob.{rulename}.{jobid}.log

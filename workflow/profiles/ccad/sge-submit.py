@@ -165,8 +165,9 @@ def parse_qsub_settings(source, resource_mapping=RESOURCE_MAPPING, option_mappin
                 found = True
                 job_options["options"].update({okey : sval})
                 break
-        if not found:
-            raise KeyError(f"Unknown SGE option or resource: {skey}")
+        if not found: continue
+            #print(f"Unknown SGE option or resource: {skey}")
+            #raise KeyError(f"Unknown SGE option or resource: {skey}")
 
     return job_options
 
@@ -213,9 +214,11 @@ def submit_job(jobscript, qsub_settings):
     flatten = lambda l: [item for sublist in l for item in sublist]
     batch_options = flatten([sge_option_string(k,v).split() for k, v in qsub_settings["options"].items()])
     batch_resources = flatten([sge_resource_string(k, v).split() for k, v in qsub_settings["resources"].items()])
+    submission_string = ["qsub", "-terse"] + batch_options + batch_resources + [jobscript]
     try:
         # -terse means only the jobid is returned rather than the normal 'Your job...' string
-        jobid = subprocess.check_output(["qsub", "-terse"] + batch_options + batch_resources + [jobscript]).decode().rstrip()
+        jobid = subprocess.check_output(submission_string).decode().rstrip()
+        #jobid = subprocess.check_output(["qsub", "-terse"] + batch_options + batch_resources + [jobscript]).decode().rstrip()
     except subprocess.CalledProcessError as e:
         raise e
     except Exception as e:
