@@ -4,8 +4,9 @@
 """HaplotyeCaller module of CGR germline variant calling pipeline
 """
 
-from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
-GS = GSRemoteProvider()
+if clusterMode == "gcp" or useRemoteFiles:
+    from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
+    GS = GSRemoteProvider()
 
 
 rule HC_call_variants:

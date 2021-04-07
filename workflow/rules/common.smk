@@ -4,8 +4,9 @@ import os
 import subprocess
 import pandas as pd
 
-from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
-GS = GSRemoteProvider()
+if clusterMode == "gcp" or useRemoteFiles:
+    from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
+    GS = GSRemoteProvider()
 
 # The pipeline will terminate with an error without .bai files
 # The assumption is enforced in input to DV, HC and Strelka2 calling rules

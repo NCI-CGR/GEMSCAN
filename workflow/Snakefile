@@ -23,16 +23,12 @@ import subprocess
 import glob
 from pathlib import Path
 from datetime import datetime
-from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
+
 
 # reference the config file
 configfile: "../config/config.yaml"
 report: 'report/workflow.rst'
     
-#including the common functions
-include: "rules/common.smk"
-
-
 # import variables from the config file
 hc_mode = config['runMode']['haplotypeCaller']
 dv_mode = config['runMode']['deepVariant']
@@ -45,9 +41,14 @@ by_chrom = config['by_chrom']
 threads = config['threads']
 clusterMode = config['clusterMode']
 outputDir = config['outputDir']
+useRemoteFiles = config['useRemoteFiles']
 
-if clusterMode == "gcp":
+if clusterMode == "gcp" or useRemoteFiles:
+    from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
     GS = GSRemoteProvider()
+    
+#including the common functions
+include: "rules/common.smk"    
 
 
 if dv_mode:
