@@ -1,4 +1,26 @@
-# This file should contain everything to configure the workflow on a global scale.
-# In case of sample based data, it should be complemented by a manifest file that contains
-# one row per sample. It can be parsed easily via pandas.
-manifest: "config/manifest.tsv"
+maxJobs: 100
+
+outputDir: 'path/to/outputdir' 
+
+clusterMode: 'cluster' or 'gcp'
+
+refGenome: 'path/to/ref/fasta'
+bedFile: 'path/to/bedfile'
+bedFileGZ: '/path/to/gzippedBedFile'
+
+runMode:
+  streka2: FALSE
+  haplotypeCaller: FALSE
+  deepVariant: TRUE
+  harmonize: FALSE  # will only be run if both callers are used
+
+by_chrom: TRUE #if you like the workflow to be run by chromosome, FALSE if you like to to be run by sample
+threads: 8
+
+# DeepVariant parameters
+model_type: PACBIO or WGS or WES
+
+# Strelka2 parameters
+glnexusConfig: 'full/path/to/strelka2_glnexus.yml'
+exome_param: # '--exome' if it's WES, otherwise ''
+memGB: 16
