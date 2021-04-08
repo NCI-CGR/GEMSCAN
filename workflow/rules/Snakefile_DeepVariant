@@ -79,6 +79,10 @@ rule DV_create_each_sample_manifest:
         temp("deepVariant/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
             "deepVariant/called/gvcfs/{sample}_manifest.txt"
         ),
+    resources:
+        machine_type="n1-standard-8",
+        runtime=2880,
+        mem_mb=16000    
     benchmark:
         "run_times/DV_create_each_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else "run_times/DV_create_sample_manifest/{sample}_manifest.tsv"
     shell:
@@ -146,6 +150,10 @@ rule DV_GLmerge_gvcfs:
         ),
     params:
         workDir="DV_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else "DV_GLmerge_gvcfs/all_chrs",
+    resources:
+        machine_type="n1-standard-8",
+        runtime=2880,
+        mem_mb=16000    
     benchmark:
         "run_times/DV_GLmerge_gvcfs/{chrom}/DV_GLmerge_gvcfs.tsv" if by_chrom else "run_times/DV_GLmerge_gvcfs/DV_GLmerge_gvcfs.tsv"
     conda:
@@ -216,7 +224,7 @@ rule DV_run_deepvariant:
     resources:
         machine_type="n1-standard-8",
         runtime=2880,
-        mem_mb=4000
+        mem_mb=16000
     threads: 8
     benchmark:
         "run_times/DV_run_deepvariant/{chrom}/{sample}.tsv" if by_chrom else "run_times/DV_run_deepvariant/{sample}.tsv"
