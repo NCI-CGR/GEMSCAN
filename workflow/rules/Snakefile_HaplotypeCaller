@@ -249,8 +249,8 @@ rule HC_genotype_gvcfs:
         gvcf="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz",
         idx="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz.tbi",
     output:
-        vcf="HaplotypeCaller/genotyped/{chrom}.vcf.gz",
-        idx="HaplotypeCaller/genotyped/{chrom}.vcf.gz.tbi",
+        vcf="HaplotypeCaller/genotyped/all_chroms.vcf.gz",
+        idx="HaplotypeCaller/genotyped/all_chroms.vcf.gz.tbi",
     log:
         "logs/gatk/genotypegvcfs.{chrom}.log",
     params:
