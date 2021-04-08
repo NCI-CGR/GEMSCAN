@@ -223,7 +223,7 @@ rule combine_gvcfs:
         "logs/gatk/combinegvcfs.log",
     resources:
         runtime=2880,
-        mem_mb=2048
+        mem_mb=16000
     threads: 4
     conda:
         "../envs/gatk4.yaml"
@@ -256,7 +256,7 @@ rule HC_genotype_gvcfs:
     params:
         interval="{chrom}",
     resources:
-        mem_mb=2048
+        mem_mb=20480
     conda:
         "../envs/gatk4.yaml"
     singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'    
