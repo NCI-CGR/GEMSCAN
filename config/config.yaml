@@ -2,15 +2,17 @@ maxJobs: 100
 
 outputDir: 'path/to/outputdir' 
 
-clusterMode: 'cluster' or 'gcp'
+clusterMode: 'cluster' or 'gcp' 
+
+useRemoteFiles: FALSE
 
 refGenome: 'path/to/ref/fasta'
 bedFile: 'path/to/bedfile'
 bedFileGZ: '/path/to/gzippedBedFile'
 
 runMode:
-  streka2: FALSE
-  haplotypeCaller: FALSE
+  streka2: TRUE
+  haplotypeCaller: TRUE
   deepVariant: TRUE
   harmonize: FALSE  # will only be run if both callers are used
 
