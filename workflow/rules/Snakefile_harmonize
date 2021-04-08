@@ -4,9 +4,10 @@
 """VCF harmonization module of CGR germline variant calling pipeline
 """
 
-from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
 
-if clusterMode == "gcp":
+
+if clusterMode == "gcp" or useRemoteFiles:
+    from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
     GS = GSRemoteProvider()
 
 
@@ -16,7 +17,7 @@ rule Strelka2_norm_left_align_split:
     input:
         vcf="strelka2/genotyped/strelka2_variants.vcf.gz",
         i="strelka2/genotyped/strelka2_variants.vcf.gz.tbi",
-        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
+        ref=path_sanitize(refGenome),
     output:
         "ensemble/strelka2_normalized.vcf.gz",
     benchmark:
@@ -35,7 +36,7 @@ rule HC_norm_left_align_split:
     input:
         vcf="HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz",
         i="HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz.tbi",
-        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
+        ref=path_sanitize(refGenome),
     output:
         "ensemble/HC_normalized.vcf.gz",
     benchmark:
@@ -54,7 +55,7 @@ rule DV_norm_left_align_split:
     input:
         vcf="deepVariant/genotyped/DV_variants.vcf.gz",
         i="deepVariant/genotyped/DV_variants.vcf.gz.tbi",
-        ref=GS.remote(refGenome) if clusterMode == "gcp" else refGenome,
+        ref=path_sanitize(refGenome),
     output:
         "ensemble/DV_normalized.vcf.gz",
     benchmark:
