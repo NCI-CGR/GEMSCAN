@@ -110,7 +110,7 @@ if hc_mode and not dv_mode and not strelka2_mode:
     include: 'rules/Snakefile_HaplotypeCaller'
     rule all:
         input:
-            'HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz'
+            'HaplotypeCaller/genotyped/HC_variants.vcf.gz'
 
 if dv_mode and not hc_mode and not strelka2_mode:
     include: 'rules/Snakefile_DeepVariant'
@@ -126,7 +126,7 @@ if hc_mode and dv_mode and strelka2_mode and not har_mode:
     include: 'rules/Snakefile_Strelka2'
     rule all:
         input:
-            'HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz',
+            'HaplotypeCaller/genotyped/HC_variants.vcf.gz',
             'deepVariant/genotyped/DV_variants.vcf.gz',   
             'strelka2/genotyped/strelka2_variants.vcf.gz'
             

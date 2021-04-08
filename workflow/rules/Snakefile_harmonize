@@ -34,8 +34,8 @@ rule HC_norm_left_align_split:
     """Normalize, left-align, and split mulit-allelics in the HC vcf.
     """
     input:
-        vcf="HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz",
-        i="HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz.tbi",
+        vcf="HaplotypeCaller/genotyped/HC_variants.vcf.gz",
+        i="HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi",
         ref=path_sanitize(refGenome),
     output:
         "ensemble/HC_normalized.vcf.gz",
