@@ -80,9 +80,7 @@ rule DV_create_each_sample_manifest:
             "deepVariant/called/gvcfs/{sample}_manifest.txt"
         ),
     resources:
-        machine_type="n1-standard-8",
-        runtime=2880,
-        mem_mb=16000    
+        machine_type="n1-standard-2"     
     benchmark:
         "run_times/DV_create_each_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else "run_times/DV_create_sample_manifest/{sample}_manifest.tsv"
     shell:
@@ -153,13 +151,14 @@ rule DV_GLmerge_gvcfs:
     resources:
         machine_type="n1-standard-8",
         runtime=2880,
-        mem_mb=16000    
+        mem_mb=16000 
+    threads: 8     
     benchmark:
         "run_times/DV_GLmerge_gvcfs/{chrom}/DV_GLmerge_gvcfs.tsv" if by_chrom else "run_times/DV_GLmerge_gvcfs/DV_GLmerge_gvcfs.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
+        "docker://shukwong/glnexus:12012020"
     shell:
         "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
         "if [ ! -f glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli; chmod +x glnexus_cli; fi;"
