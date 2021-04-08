@@ -196,8 +196,8 @@ rule combine_gvcfs:
             else expand("HaplotypeCaller/called/{sample}.g.vcf.gz.tbi", sample=sampleList)
         ),
     output:
-        gvcf="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz",
-        idx="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz.tbi",
+        gvcf="HaplotypeCaller/called/all_chroms.g.vcf.gz",
+        idx="HaplotypeCaller/called/all_chroms.g.vcf.gz.tbi",
     params:
         gvcf=(
             list(
@@ -246,8 +246,8 @@ rule HC_genotype_gvcfs:
         i6=path_sanitize(refGenome + ".fai"),
         i7=path_sanitize(dictionaryFile),
         bed=path_sanitize(bedFile),
-        gvcf="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz",
-        idx="HaplotypeCaller/genotyped/all_chroms.g.vcf.gz.tbi",
+        gvcf="HaplotypeCaller/called/all_chroms.g.vcf.gz",
+        idx="HaplotypeCaller/called/all_chroms.g.vcf.gz.tbi",
     output:
         vcf="HaplotypeCaller/genotyped/all_chroms.vcf.gz",
         idx="HaplotypeCaller/genotyped/all_chroms.vcf.gz.tbi",
@@ -271,24 +271,3 @@ rule HC_genotype_gvcfs:
                                     -G StandardHCAnnotation \
                                     -L {params.interval}'
 
-
-rule HC_concat_vcfs_bcftools:
-    """
-    """
-    input:
-        vcfList=expand("HaplotypeCaller/genotyped/{chrom}.vcf.gz", chrom=chromList),
-        indexList=expand("HaplotypeCaller/genotyped/{chrom}.vcf.gz.tbi", chrom=chromList),
-    output:
-        projectVCF=protected("HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz"),
-        idx=protected("HaplotypeCaller/genotyped/combined/HC_variants.vcf.gz.tbi"),
-    params:
-        t=temp(directory("HC_concat_vcfs_bcftools")),
-    benchmark:
-        "run_times/HC_concat_vcfs_bcftools/HC_variants.tsv"
-    conda:
-        "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"     
-    shell:
-        "mkdir -p {params.t};"
-        "bcftools concat -a {input.vcfList} -Ou | bcftools sort -T {params.t} -Oz -o {output.projectVCF};"
-        "tabix -p vcf {output.projectVCF}"
