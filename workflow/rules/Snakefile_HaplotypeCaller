@@ -252,7 +252,7 @@ rule HC_genotype_gvcfs:
         vcf="HaplotypeCaller/genotyped/all_chroms.vcf.gz",
         idx="HaplotypeCaller/genotyped/all_chroms.vcf.gz.tbi",
     log:
-        "logs/gatk/genotypegvcfs.{chrom}.log",
+        "logs/gatk/genotypegvcfs.log",
     params:
         interval="{chrom}",
     resources:
