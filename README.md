@@ -8,7 +8,7 @@ Joint variant calling with GATK4 HaplotypeCaller, Google DeepVariant 1.0.0 and S
 
 ## Usage
 
-If you use this workflow in a paper, don't forget to give credits to the authors by citing the URL of this (original) repository and, if available, its DOI (see above).
+If you use this workflow in a paper, don't forget to give credits to the authors by citing the URL of this (original) repository and, if available, its DOI (see above). The documentation of this pipeline is at https://gemscan.readthedocs.io/en/latest/ 
 
 ### Step 1: Obtain a copy of this workflow
 
