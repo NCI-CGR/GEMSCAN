@@ -3,18 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to germlineSmallVariantCallingV4's documentation!
+Documentation for GEMSCAN (GErMline Snp Small Indel CAller PipeliNe)
 =========================================================
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   Installation
+   Input_and_Output
+   Running_on_DCEG_CCAD
+   Running_on_NIH_Biowulf
+   Running_on_GCP
+   Running_on_other_clusters
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

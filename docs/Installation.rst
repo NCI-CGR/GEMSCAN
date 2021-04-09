@@ -3,19 +3,14 @@
 Installation
 ============
 
-Overview
---------
-
-This document will cover the installation process for this pipeline.
-
-
-.. _conda: https://docs.conda.io/en/latest/
-
----------------------------
+The installation procese for the GEMSCAN pipeline is as follows:
 
 *  Install or activate conda_
 *  If needed, install git
-*  Clone the `germlinecalling pipeline v4`_
+*  Clone the germlineCallingPipeline_
 *  Navigate into the repository directory
-*  follow https://snakemake.readthedocs.io/en/stable/getting_started/installation.html to install snakemake conda environment
-*  conda activate snakemake
+*  Follow the instruction here_ to to install the snakemake conda environment
+
+.. _here: https://snakemake.readthedocs.io/en/stable/getting_started/installation.html 
+.. _conda: https://docs.conda.io/en/latest/
+.. _germlineCallingPipeline: https://github.com/shukwong/germlineSmallVariantCallingV4
