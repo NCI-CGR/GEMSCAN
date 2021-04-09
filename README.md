@@ -1,4 +1,4 @@
-# CGR workflow: CGR germlineSmallVariantCallingV4
+# GEMSCAN - GErMline Snp Small Indel CAller PipeliNe 
 
 Joint variant calling with GATK4 HaplotypeCaller, Google DeepVariant 1.0.0 and Strelka2, coordinated via Snakemake.
 
