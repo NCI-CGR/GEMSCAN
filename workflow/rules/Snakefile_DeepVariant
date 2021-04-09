@@ -246,26 +246,26 @@ rule DV_run_deepvariant:
                                 --output_gvcf={output.gvcf} \
                                 --num_shards={params.threads}; \
         else \
-        rm -rf {tmp_dir}; mkdir -p {tmp_dir}; \
+        rm -rf {params.tmp_dir}; mkdir -p {params.tmp_dir}; \
         dv_make_examples.py \
                 --cores {threads} \
                 --ref {input.ref} \
                 --reads {input.bam} \
                 --sample {params.sm} \
-                --examples {tmp_dir}/{params.sm} \
-                --gvcf {tmp_dir}/{params.sm}.gvcf.tmp \
-                --logdir {log_dir}; \
+                --examples {params.tmp_dir}/{params.sm} \
+                --gvcf {params.tmp_dir}/{params.sm}.gvcf.tmp \
+                --logdir {params.log_dir}; \
         dv_call_variants.py \
                 --cores {threads} \
-                --outfile {tmp_dir}/{params.sm}.tmp \
+                --outfile {params.tmp_dir}/{params.sm}.tmp \
                 --sample {params.sm} \
-                --examples {tmp_dir}/{params.sm} \
-                --model {model_type}; \
+                --examples {params.tmp_dir}/{params.sm} \
+                --model {params.model_type}; \
         dv_postprocess_variants.py \
                 --ref {input.ref} \
-                --infile {output_dir}/{params.sm}.tmp \
+                --infile {params.tmp_dir}/{params.sm}.tmp \
                 --outfile {output.vcf} \
-                --gvcf_infile {tmp_dir}/{params.sm}.gvcf.tmp \
+                --gvcf_infile {params.tmp_dir}/{params.sm}.gvcf.tmp \
                 --gvcf_outfile {output.gvcf}; \
         fi"
 
