@@ -189,8 +189,8 @@ rule Strelka2_GLmerge_gvcfs:
         ),
     params:
         workDir=(
-            "Strelka2_GLmerge_gvcfs/" + "{chrom}/" + dt if by_chrom
-            else "Strelka2_GLmerge_gvcfs/" + dt
+            "Strelka2_GLmerge_gvcfs/" + "{chrom}/" if by_chrom
+            else "Strelka2_GLmerge_gvcfs/"
         ),
     benchmark:
         "run_times/strelka2_GLmerge_gvcfs/{chrom}/GLmerge.tsv" if by_chrom else "run_times/strelka2_GLmerge_gvcfs/GLmerge.tsv"
@@ -199,7 +199,7 @@ rule Strelka2_GLmerge_gvcfs:
     singularity:
         'docker://shukwong/glnexus:12012020'     
     shell:
-        "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir}; cd {params.workDir};"
+        "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
         "if [ ! -f {params.workDir}/glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli -P {params.workDir}; chmod +x {params.workDir}/glnexus_cli; fi;"
         "{params.workDir}/glnexus_cli --config {input.glnexusConfig} --dir {params.workDir}/GLnexus.DB --bed {input.b} --list {input.m}  > {output}"
 
