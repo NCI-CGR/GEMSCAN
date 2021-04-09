@@ -252,9 +252,7 @@ rule HC_genotype_gvcfs:
         vcf="HaplotypeCaller/genotyped/HC_variants.vcf.gz",
         idx="HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi",
     log:
-        "logs/gatk/genotypegvcfs.log",
-    params:
-        interval="{chrom}",
+        "logs/gatk/genotypegvcfs.log"
     resources:
         mem_mb=20480
     conda:
@@ -268,6 +266,5 @@ rule HC_genotype_gvcfs:
                               -stand-call-conf 30 \
                                     -new-qual \
                                     -G StandardAnnotation \
-                                    -G StandardHCAnnotation \
-                                    -L {params.interval}'
+                                    -G StandardHCAnnotation'
 
