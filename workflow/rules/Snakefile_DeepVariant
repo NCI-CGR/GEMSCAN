@@ -161,7 +161,7 @@ rule DV_GLmerge_gvcfs:
         "docker://quay.io/shukwong/bcftools:2020-12-09"
     shell:
         "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
-        "if [ ! -f glnexus_cli ]; then curl https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli --output {params.workDir}/glnexus_cli; chmod +x {params.workDir}/glnexus_cli; fi;"
+        "if [ ! -f {params.workDir}/glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli -P {params.workDir}; chmod +x {params.workDir}/glnexus_cli; fi;"
         "{params.workDir}/glnexus_cli --config DeepVariant --dir {params.workDir}/GLnexus.DB  --bed {input.b} --list {input.m} > {output};"
         "rm {params.workDir}/glnexus_cli;"
 
