@@ -158,11 +158,12 @@ rule DV_GLmerge_gvcfs:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://shukwong/glnexus:12012020"
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
     shell:
         "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
-        "if [ ! -f glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli; chmod +x glnexus_cli; fi;"
-        "./glnexus_cli --config DeepVariant --dir {params.workDir}/GLnexus.DB  --bed {input.b} --list {input.m} > {output}"
+        "if [ ! -f glnexus_cli ]; then curl https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli --output {params.workDir}/glnexus_cli; chmod +x {params.workDir}/glnexus_cli; fi;"
+        "{params.workDir}/glnexus_cli --config DeepVariant --dir {params.workDir}/GLnexus.DB  --bed {input.b} --list {input.m} > {output};"
+        "rm {params.workDir}/glnexus_cli;"
 
 
 rule DV_compress_merged_vcfs:
@@ -234,7 +235,8 @@ rule DV_run_deepvariant:
     log:
         "logs/DV_run_deepvariant/DV_run_deepvariant.{chrom}.{sample}.log" if by_chrom else "logs/DV_run_deepvariant/DV_run_deepvariant.{sample}.log",
     shell:
-        "/opt/deepvariant/bin/run_deepvariant \
+        "if [ -f /opt/deepvariant/bin/run_deepvariant ]; then \
+        /opt/deepvariant/bin/run_deepvariant \
                                 --model_type={params.model_type} \
                                 --ref={input.ref}  \
                                 --reads={input.bam} \
@@ -242,27 +244,28 @@ rule DV_run_deepvariant:
                                 --sample_name {params.sm} \
                                 --output_vcf={output.vcf} \
                                 --output_gvcf={output.gvcf} \
-                                --num_shards={params.threads}"
+                                --num_shards={params.threads}; \
+        else \
+        rm -rf {tmp_dir}; mkdir -p {tmp_dir}; \
+        dv_make_examples.py \
+                --cores {threads} \
+                --ref {input.ref} \
+                --reads {input.bam} \
+                --sample {params.sm} \
+                --examples {tmp_dir}/{params.sm} \
+                --gvcf {tmp_dir}/{params.sm}.gvcf.tmp \
+                --logdir {log_dir}; \
+        dv_call_variants.py \
+                --cores {threads} \
+                --outfile {tmp_dir}/{params.sm}.tmp \
+                --sample {params.sm} \
+                --examples {tmp_dir}/{params.sm} \
+                --model {model_type}; \
+        dv_postprocess_variants.py \
+                --ref {input.ref} \
+                --infile {output_dir}/{params.sm}.tmp \
+                --outfile {output.vcf} \
+                --gvcf_infile {tmp_dir}/{params.sm}.gvcf.tmp \
+                --gvcf_outfile {output.gvcf}; \
+        fi"
 
-
-#    shell:
-#        "rm -rf DV_run_deepvariant_TMP; mkdir DV_run_deepvariant_TMP;"
-#        "BIN_DIR=$(ls -d $CONDA_PREFIX/share/deepvariant*/binaries/DeepVariant/*/DeepVariant*);"
-#        "MODEL_DIR=$(ls -d $CONDA_PREFIX/share/deepvariant*/models/DeepVariant/*/DeepVariant*{model_type}_standard);"
-#        "parallel --eta --halt 2 --joblog {params.log_dir}/DV_run_deepvariant_joblog --res {params.log_dir} "
-#        "python $BIN_DIR/make_examples.zip "
-#        "--mode calling --ref {input.ref} --reads {input.bam} "
-#        "--regions {input.bed} "
-#        "--examples {params.tmp_dir}/{params.sm}.tfrecord@{params.threads}.gz "
-#        "--gvcf {params.tmp_dir}/{params.sm}.gvcf.tfrecord@{params.threads}.gz "
-#        "--task {{}} "
-#        "::: {params.split_inputs} ;"
-#        "python $BIN_DIR/call_variants.zip "
-#        "--outfile {params.tmp_dir}/{params.sm}.tmp --examples {params.tmp_dir}/{params.sm}.tfrecord@{params.threads}.gz "
-#        "--checkpoint {params.model_dir}/model.ckpt;"
-#        "python $BIN_DIR/postprocess_variants.zip "
-#        "--ref {input.ref} "
-#        "--infile {params.tmp_dir}/{params.sm}.tmp "
-#        "--outfile {output.vcf} "
-#        "--nonvariant_site_tfrecord_path {params.tmp_dir}/{params.sm}.gvcf.tfrecord@{params.threads}.gz "
-#        "--gvcf_outfile {output.gvcf}"

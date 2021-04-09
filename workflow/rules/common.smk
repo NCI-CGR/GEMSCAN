@@ -48,13 +48,6 @@ def get_DBImport_path2(wildcards):
         myList = [path + file for file in myList]
     return(myList)
 
-def get_DV_model_path(model_type):
-    if clusterMode == "gcp":
-        model_path = os.system("ls -d $CONDA_PREFIX/share/deepvariant*/models/DeepVariant/*/DeepVariant*" + 
-                   model_type + "_standard")
-    else:
-        model_path =  modelPath + "/DeepVariant-inception_v3-1.0.0+data-" + model_type + "_standard/"
-    return model_path    
 
 # read in chromosome list from reference dict file (assumes the dict is already created)
 # this circumvents the issue of whether to use hg19-style or b37-style chromosome annotation
