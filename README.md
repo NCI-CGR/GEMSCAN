@@ -5,6 +5,7 @@ Joint variant calling with GATK4 HaplotypeCaller, Google DeepVariant 1.0.0 and S
 ## Authors
 
 * Shalabh Suman, Bari Ballew and Wendy Wong 
+* Technical Lead: Bin Zhu
 
 ## Usage
 
