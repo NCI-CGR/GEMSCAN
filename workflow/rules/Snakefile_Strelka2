@@ -92,11 +92,11 @@ rule strelka2_callVariant:
         ),
         exome_param=exome_param,
         threads=threads,
-        memGB=memGB,
+        memGB=strelka2_memGB,
     resources:
         machine_type="n1-standard-8",
         runtime=2880,
-        mem_mb=memGB*1000
+        mem_mb=strelka2_memGB*1000
     threads: 8
     benchmark:
         "run_times/strelka_callVariantByChrom/{chrom}/{sample}.tsv" if by_chrom else "run_times/strelka2_callVariant/{sample}.tsv"
