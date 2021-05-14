@@ -55,13 +55,16 @@ if dv_mode:
     #modelPath = config['modelPath']
     #useShards = config['useShards']
     model_type = config['model_type']
+    deepvariant_memMB = config['deepvariant_memGB']
 
 if strelka2_mode:
     bedFileGZ = config['bedFileGZ']
     glnexusConfig = config['glnexusConfig']
     exome_param = config['exome_param']
-    memGB = config['memGB']
-
+    strelka2_memGB = config['strelka2_memGB']
+    
+if hc_mode:    
+    hc_memGB = config['hc_memGB']
 
 CALLERS = ['HC', 'DV', 'strelka2']  # used in harmonize module
 
