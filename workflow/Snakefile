@@ -46,6 +46,10 @@ useRemoteFiles = config['useRemoteFiles']
 if clusterMode == "gcp" or useRemoteFiles:
     from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
     GS = GSRemoteProvider()
+
+if clusterMode == "cluster":
+   outputDir = "./"
+
     
 #including the common functions
 include: "rules/common.smk"    
