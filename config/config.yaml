@@ -21,6 +21,7 @@ threads: 8
 
 # DeepVariant parameters
 model_type: PACBIO or WGS or WES
+deepvariant_memMB: 32000 #it is recommended that this memory to be set to roughly the same as the BAM file size
 
 # Strelka2 parameters
 glnexusConfig: 'full/path/to/strelka2_glnexus.yml'
