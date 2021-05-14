@@ -39,7 +39,7 @@ rule HC_call_variants:
     resources:
         machine_type="n1-standard-8",
         runtime=2880,
-        mem_mb=8000
+        mem_mb=32000
     threads: 4    
     benchmark:
         "run_times/HC_call_variants/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_call_variants/{sample}.tsv"
@@ -47,7 +47,7 @@ rule HC_call_variants:
         "../envs/gatk4.yaml"
     singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'     
     shell:
-        'gatk --java-options "-Xmx8G" HaplotypeCaller \
+        'gatk --java-options "-Xmx32G" HaplotypeCaller \
                                     -R {input.ref} \
                                     -I {input.bam} \
                                     -ERC GVCF \
@@ -223,13 +223,13 @@ rule combine_gvcfs:
         "logs/gatk/combinegvcfs.log",
     resources:
         runtime=2880,
-        mem_mb=16000
+        mem_mb=32000
     threads: 4
     conda:
         "../envs/gatk4.yaml"
     singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09' 
     shell:
-        'gatk --java-options "-Xmx16G" CombineGVCFs \
+        'gatk --java-options "-Xmx32G" CombineGVCFs \
                                 {params.gvcf} \
                                 -R {input.ref} \
                                 -O {output.gvcf} '
@@ -250,16 +250,19 @@ rule HC_genotype_gvcfs:
         idx="HaplotypeCaller/called/all_chroms.g.vcf.gz.tbi",
     output:
         vcf="HaplotypeCaller/genotyped/HC_variants.vcf.gz",
-        idx="HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi",
+        idx="HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi"
+    params:
+        memGB=hc_memGB
     log:
         "logs/gatk/genotypegvcfs.log"
     resources:
-        mem_mb=20480
+        runtime=2880,
+        mem_mb=hc_memGB*1000
     conda:
         "../envs/gatk4.yaml"
     singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'    
     shell:
-        'gatk --java-options "-Xmx20G" GenotypeGVCFs \
+        'gatk --java-options "-Xmx32G" GenotypeGVCFs \
                               -V {input.gvcf} \
                               -R {input.ref} \
                               -O {output.vcf} \
