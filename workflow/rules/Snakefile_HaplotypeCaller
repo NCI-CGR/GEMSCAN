@@ -251,13 +251,11 @@ rule HC_genotype_gvcfs:
     output:
         vcf="HaplotypeCaller/genotyped/HC_variants.vcf.gz",
         idx="HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi"
-    params:
-        memGB=hc_memGB
     log:
         "logs/gatk/genotypegvcfs.log"
     resources:
         runtime=2880,
-        mem_mb=hc_memGB*1000
+        mem_mb=32000
     conda:
         "../envs/gatk4.yaml"
     singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'    
