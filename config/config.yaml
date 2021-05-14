@@ -1,6 +1,6 @@
 maxJobs: 100
 
-outputDir: 'path/to/outputdir' 
+outputDir: './' #set it to current dir (./) if running on a cluster, or to a gs storage bucket if running on GCP 
 
 clusterMode: 'cluster' or 'gcp' 
 
@@ -21,9 +21,12 @@ threads: 8
 
 # DeepVariant parameters
 model_type: PACBIO or WGS or WES
-deepvariant_memMB: 32000 #it is recommended that this memory to be set to roughly the same as the BAM file size
+deepvariant_memGB: 32 #it is recommended that this memory to be set to roughly the same as the BAM file size
 
 # Strelka2 parameters
 glnexusConfig: 'full/path/to/strelka2_glnexus.yml'
 exome_param: # '--exome' if it's WES, otherwise ''
-memGB: 16
+strelka2_memGB: 32
+
+# Haplotype Caller parameters
+hc_memGB: 32
