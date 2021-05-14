@@ -28,5 +28,3 @@ glnexusConfig: 'full/path/to/strelka2_glnexus.yml'
 exome_param: # '--exome' if it's WES, otherwise ''
 strelka2_memGB: 32
 
-# Haplotype Caller parameters
-hc_memGB: 32
