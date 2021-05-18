@@ -18,6 +18,27 @@ bam2.bam``
 Note that if the input files are on google storage please also use ``gs://`` as the prefix. The pipeline uses the prefix to determine whether they are remote files.
 Also note that while on-prem/local runs can take advantage of remote files, currently it may cause unexpected errors when multiple tasks try to download the same file into the same location. This will be solved in the next release.
 
+reference files
+---------------
+Please provide the fasta file for the correct genome build (`hg19`_ and `hg38`_) and its associated index files listed below:
+- .dict file
+```
+gatk CreateSequenceDictionary -R ref.fasta
+```
+- .fai file
+```
+samtools faidx ref.fasta 
+```
+- {amb,ann,bwt,pac,sa} files
+```
+bwa index reference.fasta
+```
+
+
+region file
+-----------
+The user should provide both a bed file and a gzipped bed file.
+
 Config file
 -----------
 
@@ -33,3 +54,6 @@ Multi-sample VCF called with DeepVariant
 Multi-sample VCF called with HaplotypeCaller
 Multi-sample VCF called with Strelka2
 Multi-sample VCF containing the union of the DeepVariant, HaplotypeCaller and Strelka2 calls
+
+.. _hg19: https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/hg19.fa.gz
+.. _hg38: https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz
