@@ -11,7 +11,7 @@ We also assume that the BAM file index are in the same directory and are with th
 
 samples.txt
 -----------
-In the config folder, please edit the samples.txt to list the aligned BAM files, one on each line. 
+In the config folder, please create a samples.txt file to list the aligned BAM files, one on each line. 
 For example:
 ``bam1.bam
 bam2.bam``
@@ -42,7 +42,8 @@ The user should provide both a bed file and a gzipped bed file.
 Config file
 -----------
 
-Edit config.yaml file accordingly, please note that you need to:
+config_template.yaml file is provided in the config directory, copy it to config.yaml and
+edit config.yaml file accordingly, please note that you need to:
 - provide full path to strelka2_glnexus.yml for glnexusConfig if strelka2 is used
 
 
