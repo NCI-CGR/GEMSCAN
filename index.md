@@ -8,4 +8,8 @@ The documentation of GEMSCAN is currently available on [readthedocs](https://gem
 
 ### Support or Contact
 
-Having trouble with GEMSCAN? Please create an issue on the [GEMSCAN repository](https://github.com/NCI-CGR/GEMSCAN) and we’ll help you sort it out.
+Having trouble with GEMSCAN? Please check the FAQ below for commonly encountered issues. If you can't find a solution there please create an issue on the [GEMSCAN repository](https://github.com/NCI-CGR/GEMSCAN) we would try to help you out. And if you have any suggestions we would love to hear from you as well!
+
+### FAQ
+- to be added
+
