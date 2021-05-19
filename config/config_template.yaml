@@ -2,7 +2,7 @@ maxJobs: 100
 
 outputDir: './' #set it to current dir (./) if running on a cluster, or to a gs storage bucket if running on GCP 
 
-clusterMode: 'cluster' or 'gcp' 
+clusterMode: # set it to 'cluster' if you are using a cluster such as SGE or slurm, or 'gcp' if you want to use google-lifesciences api
 
 useRemoteFiles: FALSE
 
@@ -14,17 +14,16 @@ runMode:
   streka2: TRUE
   haplotypeCaller: TRUE
   deepVariant: TRUE
-  harmonize: FALSE  # will only be run if both callers are used
+  harmonize: FALSE  # will only be run if all callers are used
 
 by_chrom: TRUE #if you like the workflow to be run by chromosome, FALSE if you like to to be run by sample
 threads: 8
 
 # DeepVariant parameters
-model_type: PACBIO or WGS or WES
+model_type: #PACBIO or WGS or WES
 dv_memGB: 32 #it is recommended that this memory to be set to roughly the same as the BAM file size
 
 # Strelka2 parameters
-glnexusConfig: 'full/path/to/strelka2_glnexus.yml'
+glnexusConfig: # set it to full/path/to/strelka2_glnexus.yml this files is included in the config directory
 exome_param: # '--exome' if it's WES, otherwise ''
 strelka2_memGB: 32
-
