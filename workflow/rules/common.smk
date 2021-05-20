@@ -4,18 +4,26 @@ import os
 import subprocess
 import pandas as pd
 
+
 if clusterMode == "gcp" or useRemoteFiles:
     from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
     GS = GSRemoteProvider()
 
 # The pipeline will terminate with an error without .bai files
 # The assumption is enforced in input to DV, HC and Strelka2 calling rules
+# NOT USED
 def get_samples(samplesFile):
     with open(samplesFile) as f:
         bamList = [line.rstrip() for line in f]
     return(bamList)
 
-    
+# read in the samples file, we assume that they are in this order: sample\tbam/cram\tindex    
+def read_samplesFile(samplesFile): 
+    samplesTable = pd.read_table(samplesFile, sep="\t", 
+                   header='infer')
+    return(samplesTable)
+
+
 def get_sm_tag(bam): 
     if Path(bam).is_file():
         command = 'samtools view -H ' + bam + ' | grep "^@RG" | grep -Eo "SM[^[:space:]]+" | cut -d":" -f2 | uniq'
@@ -27,8 +35,8 @@ def get_bam(wildcards):
     return(bam)  
 
 def get_bam_index(wildcards):
-    bam = sample2bam[wildcards.sample]
-    return(bam + '.bai')    
+    index = sample2bamIndex[wildcards.sample]
+    return(index)    
 
 def path_sanitize(path):
     if path.startswith( 'gs://' ):

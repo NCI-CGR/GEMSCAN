@@ -81,19 +81,21 @@ dictionaryFile = refDir + '/' + refNoExt + '.dict'
 dt = str(datetime.now().strftime("%y-%m-%d-%H-%M"))
 #dt = str(config['dt'])
 
+#NOTUSED
 #get the list of bam files, assuming that .bai are in the same folder
-bamList = get_samples("../config/samples.txt")
-
+#bamList = get_samples("../config/samples.txt")
 # generate sampleList based on bam filenames and then we generate the sample to bam dict
-sampleList = [os.path.splitext(os.path.basename(f))[0] for f in bamList]
-sample2bam = dict(zip(sampleList, bamList))
-
+#sampleList = [os.path.splitext(os.path.basename(f))[0] for f in bamList]
+#sample2bam = dict(zip(sampleList, bamList))
 # generate sample names list from bam SM tags and then generate the sample to sm tag dic
 #get_all_sm_tag = lambda x: get_sm_tag(x)
 #smList = list(map(get_all_sm_tag, bamList))
 
-#temp solution of using filename as sample names
-#will add option to allow user input sample names
+#read in the samples table and create map
+samplesTable = read_samplesFile("../config/samples.txt")
+sampleList = samplesTable['sampleID']
+sample2bam =  dict(zip(samplesTable['sampleID'], samplesTable['bam']))
+sample2bamIndex = dict(zip(samplesTable['sampleID'], samplesTable['index']))
 sample2sm =  dict(zip(sampleList, sampleList))
 
 # read in chromosome list from reference dict file (assumes the dict is already created)

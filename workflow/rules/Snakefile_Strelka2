@@ -60,7 +60,7 @@ rule strelka2_callVariant:
         ref=path_sanitize(refGenome),
         ref_index=path_sanitize(refGenome + ".fai") ,
         bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
-        bai=lambda wc: path_sanitize(sample2bam[wc.sample] + ".bai") ,
+        bai=lambda wc: path_sanitize(sample2bamIndex[wc.sample]) ,
         bedFileGZ="split_regions/{chrom}.bed.gz" if by_chrom else bedFileGZ,
         bedFileGZ_index="split_regions/{chrom}.bed.gz.tbi" if by_chrom else bedFileGZ + ".tbi",
     output:
