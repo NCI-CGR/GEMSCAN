@@ -42,6 +42,7 @@ threads = config['threads']
 clusterMode = config['clusterMode']
 outputDir = config['outputDir']
 useRemoteFiles = config['useRemoteFiles']
+glnexus_memGB =  config['glnexus_memGB']
 
 if clusterMode == "gcp" or useRemoteFiles:
     from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
@@ -58,14 +59,18 @@ include: "rules/common.smk"
 if dv_mode:
     #modelPath = config['modelPath']
     #useShards = config['useShards']
+    glnexus_dv_config = config['glnexus_dv_config']
     model_type = config['model_type']
     dv_memGB = config['dv_memGB']
 
 if strelka2_mode:
     bedFileGZ = config['bedFileGZ']
-    glnexusConfig = config['glnexusConfig']
+    glnexus_strelka2_config = config['glnexus_strelka2_config']
     exome_param = config['exome_param']
     strelka2_memGB = config['strelka2_memGB']
+
+if hc_mode:
+    glnexus_gatk_config = config['glnexus_gatk_config']
     
 
 CALLERS = ['HC', 'DV', 'strelka2']  # used in harmonize module
