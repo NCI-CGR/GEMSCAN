@@ -27,14 +27,14 @@ rule HC_call_variants:
         bai=lambda wc: path_sanitize(sample2bamIndex[wc.sample])
     output:
         gvcf=(
-            temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf")
+            "HaplotypeCaller/called/{chrom}/{sample}.g.vcf"
             if by_chrom
-            else temp("HaplotypeCaller/called/{sample}.g.vcf")
+            else "HaplotypeCaller/called/{sample}.g.vcf"
         ),
         idx=(
-            temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx")
+            "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx"
             if by_chrom
-            else temp("HaplotypeCaller/called/{sample}.g.vcf.idx")
+            else "HaplotypeCaller/called/{sample}.g.vcf.idx"
         )
     resources:
         machine_type="n1-standard-8",
