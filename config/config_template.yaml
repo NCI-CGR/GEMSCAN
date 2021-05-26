@@ -20,17 +20,17 @@ by_chrom: TRUE #if you like the workflow to be run by chromosome, FALSE if you l
 threads: 2
 
 #glnexus parameters
-glnexus_memGB: 8
+glnexus_memGB: 16
 glnexus_strelka2_config: #full path to config/strelka2_glnexus.yml
-glnexus_gatk_config: 'gatk_unfiltered' # or 'gatk' if sample size >1000
+glnexus_gatk_config: 'gatk' # 'gatk' is optimized config or 'gatk_unfiltered'  if you have a small sample size (<1000) and you do not want any filtering
 glnexus_dv_config: 'DeepVariantWES' #other options include DeepVariantWGS, DeepVariant_unfiltered
 
 
 # DeepVariant parameters
 model_type:  WES
-dv_memGB: 8 #it is recommended that this memory to be set to roughly the same as the BAM file size
+dv_memGB: 16 #it is recommended that this memory to be set to roughly the same as the BAM file size
 
 # Strelka2 parameters
 exome_param:  '--exome'
-strelka2_memGB: 8
+strelka2_memGB: 16
 

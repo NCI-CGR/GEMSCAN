@@ -148,6 +148,8 @@ rule DV_GLmerge_gvcfs:
         ),
     params:
         workDir="DV_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else "DV_GLmerge_gvcfs/all_chrs",
+        config=glnexus_dv_config,
+        memGB=glnexus_memGB
     resources:
         machine_type="n1-standard-8",
         runtime=2880,
@@ -162,7 +164,7 @@ rule DV_GLmerge_gvcfs:
     shell:
         "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
         "if [ ! -f {params.workDir}/glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli -P {params.workDir}; chmod +x {params.workDir}/glnexus_cli; fi;"
-        "{params.workDir}/glnexus_cli --config DeepVariant --dir {params.workDir}/GLnexus.DB  --bed {input.b} --list {input.m} > {output};"
+        "{params.workDir}/glnexus_cli --config DeepVariant --dir {params.workDir}/GLnexus.DB  --bed {input.b} --list {input.m} -m {params.memGB} -t {threads} > {output};"
         "rm {params.workDir}/glnexus_cli;"
 
 
