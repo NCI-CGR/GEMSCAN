@@ -27,7 +27,7 @@ glnexus_dv_config: 'DeepVariantWES' #other options include DeepVariantWGS, DeepV
 
 
 # DeepVariant parameters
-model_type:  WES
+model_type:  WES #or WGS if the samples are from WGS
 dv_memGB: 16 #it is recommended that this memory to be set to roughly the same as the BAM file size
 
 # Strelka2 parameters
