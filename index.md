@@ -10,6 +10,7 @@ The documentation of GEMSCAN is currently available on [readthedocs](https://gem
 
 Having trouble with GEMSCAN? Please check the FAQ below for commonly encountered issues. If you can't find a solution there please create an issue on the [GEMSCAN repository](https://github.com/NCI-CGR/GEMSCAN) we would try to help you out. And if you have any suggestions we would love to hear from you as well!
 
-### FAQ
-- to be added
+### Common issues
+- Failed to pull singularity image due to disk quota exceeded
+   - The default directory location for the image cache is **$HOME/.singularity/cache**. You may want to change the default cache location by setting the **SINGULARITY_CACHEDIR** environmental variable to another location if you have a small quota for your home directory.  
 
