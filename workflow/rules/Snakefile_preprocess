@@ -9,6 +9,22 @@ if clusterMode == "gcp":
     GS = GSRemoteProvider()      
         
 
+rule validate_bed_file:
+    input:
+        bed = GS.remote(bedFile) if clusterMode == "gcp" else bedFile
+    output:
+        validated =  'split_regions/bedFile_validated'
+    benchmark:
+        'run_times/validate_bed_file.tsv'
+    conda:
+        "envs/bedops.yaml"
+    singularity: "docker://dockerbiotools/bedops:latest"
+    log:
+        "logs/split_bed_file/split_bed_file.{chrom}.log"
+    shell:
+        "bedops --ec --everything {input.bed} && touch {output.validated}"
+
+
 rule split_bed_file:
     '''
     Separates bed regions by chromosome.
@@ -34,7 +50,8 @@ rule split_bed_file:
     don't love the || true solution; what will it do for exit > 1?
     '''
     input:
-        bed = GS.remote(bedFile) if clusterMode == "gcp" else bedFile
+        bed = GS.remote(bedFile) if clusterMode == "gcp" else bedFile,
+	validated =  'split_regions/bedFile_validated'
     output:
         bed =  'split_regions/{chrom}.bed'
     benchmark:
