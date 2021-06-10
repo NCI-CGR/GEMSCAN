@@ -11,7 +11,7 @@ In the config folder, please create the tab delimited samples.txt to list the sa
 For example:
 ```
 sampleID	bam	index
-sample1 bam1.bam bam1.bam.bai
+sample1 bam1.bam  bam1.bam.bai
 sample2 bam2.bam  bam2.bam.bai
 ```
 
