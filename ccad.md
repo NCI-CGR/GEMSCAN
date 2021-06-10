@@ -9,7 +9,7 @@
 
 - clone the repository
 
-modify ```config/samples.txt``` and ```config/config.yaml``` as described in [here](input_and_output.md)
+modify ```config/samples.txt``` and ```config/config.yaml``` as described in [here](inputs_and_outputs.md)
 
 
 - go to workflow directory
