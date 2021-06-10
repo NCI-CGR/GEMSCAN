@@ -13,4 +13,6 @@ Having trouble with GEMSCAN? Please check the FAQ below for commonly encountered
 ### Common issues
 - Failed to pull singularity image due to disk quota exceeded
    - The default directory location for the image cache is **$HOME/.singularity/cache**. You may want to change the default cache location by setting the **SINGULARITY_CACHEDIR** environmental variable to another location if you have a small quota for your home directory.  
+- Job killed when pulling singularity images
+   - From what I have seen singularity pull may require up to 2GB memory so to be safe please request at least 4GB for the Snakemake main job 
 
