@@ -28,6 +28,8 @@ bedops --ec --everything {input.bed} >/dev/null
 ```
 It is better to use the above command to see if you get any error message before running the pipeline.
 
+If you see ```Error executing rule validate_bed_file on cluster``` in your snakemake log file, chances are your bed file did not pass the *bedops* validation. Please check ```logs/validate_bed_file/bedops.log``` to see the error message from *bedops* validation.
+
 #### Config file
 
 Please create the config.yaml file from the config_template.yaml and edit accordingly, please note that you need to:
