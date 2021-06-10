@@ -20,6 +20,14 @@ The pipeline *does* support CRAM file input, please list your CRAM files under t
 Note that if the input files are on google storage please also use ``gs://`` as the prefix. The pipeline uses the prefix to determine whether they are remote files.
 Also note that while on-prem/local runs can take advantage of remote files, currently it may cause unexpected errors when multiple tasks try to download the same file into the same location. This will be solved in the next release.
 
+### bed file
+Currently, the pipeline requires a bed file and a gzipped bed file for both exome, tagetted and WGS. The bedfile needed to be sorted propoerly.
+We have included a simple check as the first task when running the pipeline
+```
+bedops --ec --everything {input.bed} >/dev/null
+```
+It is better to use the above command to see if you get any error message before running the pipeline.
+
 #### Config file
 
 Please create the config.yaml file from the config_template.yaml and edit accordingly, please note that you need to:
