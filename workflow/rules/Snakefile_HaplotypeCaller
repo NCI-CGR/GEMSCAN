@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Authors: Shalabh Suman, Bari Ballew
+# Authors: Shalabh Suman, Bari Ballew, Wendy Wong
 
 """HaplotyeCaller module of CGR germline variant calling pipeline
 """
@@ -24,22 +24,22 @@ rule HC_call_variants:
         i7=path_sanitize(dictionaryFile),
         bed="split_regions/{chrom}.bed" if by_chrom else bedFile,
         bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
-        bai=lambda wc: path_sanitize(sample2bam[wc.sample] + ".bai")
+        bai=lambda wc: path_sanitize(sample2bamIndex[wc.sample])
     output:
         gvcf=(
-            temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf")
+            "HaplotypeCaller/called/{chrom}/{sample}.g.vcf"
             if by_chrom
-            else temp("HaplotypeCaller/called/{sample}.g.vcf")
+            else "HaplotypeCaller/called/{sample}.g.vcf"
         ),
         idx=(
-            temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx")
+            "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx"
             if by_chrom
-            else temp("HaplotypeCaller/called/{sample}.g.vcf.idx")
+            else "HaplotypeCaller/called/{sample}.g.vcf.idx"
         )
     resources:
         machine_type="n1-standard-8",
         runtime=2880,
-        mem_mb=8000
+        mem_mb=32000
     threads: 4    
     benchmark:
         "run_times/HC_call_variants/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_call_variants/{sample}.tsv"
@@ -47,7 +47,7 @@ rule HC_call_variants:
         "../envs/gatk4.yaml"
     singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'     
     shell:
-        'gatk --java-options "-Xmx8G" HaplotypeCaller \
+        'gatk --java-options "-Xmx32G" HaplotypeCaller \
                                     -R {input.ref} \
                                     -I {input.bam} \
                                     -ERC GVCF \
@@ -88,183 +88,155 @@ rule HC_compress_gvcfs:
         "bgzip {input.gvcf}; tabix -p vcf {input.gvcf}.gz"
 
 
-rule HC_concat_gvcfs:
-    """
-    Not clear whether it would be fastest to concat per-chrom gvcfs and
-    then genotype, or genotype and then concat.
-    """
-    input:
-        vcfList=expand("HaplotypeCaller/called/{chrom}/{{sample}}.g.vcf.gz", chrom=chromList),
-        indexList=expand(
-            "HaplotypeCaller/called/{chrom}/{{sample}}.g.vcf.gz.tbi", chrom=chromList
-        ),
-    output:
-        gz="HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz",
-    params:
-        gvcfList=lambda wildcards, input: " -I ".join(input.vcfList),
-    benchmark:
-        "run_times/HC_concat_gvcfs/{sample}.tsv"
-    conda:
-        "../envs/gatk4.yaml"
-    singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'     
-    shell:
-        'gatk --java-options "-Xmx4G" GatherVcfs -I {params.gvcfList} -O {output.gz}'
 
-
-rule HC_index_gvcf:
-    input:
-        "HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz",
-    output:
-        "HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz.tbi",
-    benchmark:
-        "run_times/HC_index_gvcf/{sample}.tsv"
-    conda:
-        "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
-    shell:
-        "tabix -p vcf {input}"
-
-
-rule HC_create_each_sample_map_file:
-    """Create sample file to be read by GenomicsDBImport
-
-    Can pass all vcfs on the command line, each with a -V before it,
-    but with enough samples you will hit the character limit.  Instead,
-    create a sample map file and read from it.
-
-    sample map is formatted as follows: sample_name--tab--path_to_sample_vcf per line
-
-    See GATK's documentation for additional details.
+rule HC_create_each_sample_manifest:
+    """Create list of files for GLnexus to merge
+    Needed to break up into two steps (individual manifest,
+    then merging to cohort manifest) to work around command
+    line character limits when run at scale.
     """
     input:
-        gvcf=(
-            "HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz"
-            if by_chrom
-            else "HaplotypeCaller/called/{sample}.g.vcf.gz"
-        ),
-        index=(
-            "HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz.tbi"
-            if by_chrom
-            else "HaplotypeCaller/called/{sample}.g.vcf.gz.tbi"
-        ),
+        "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz" if by_chrom else "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz",
     output:
-        temp("HaplotypeCaller/DBImport/{sample}.map"),
-    benchmark:
-        "run_times/create_sample_map/{sample}.tsv"
-    conda:
-        "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"       
-    shell:
-        "n=$(bcftools query -l {input.gvcf});"
-        'echo "${{n}}\t{input.gvcf}" > {output}'
-
-
-rule HC_create_cohort_map_file:
-    input:
-        expand("HaplotypeCaller/DBImport/{sample}.map", sample=sampleList),
-    output:
-        "HaplotypeCaller/DBImport/cohort.sample_map",
-    params:
-        mapDir=outputDir + "HaplotypeCaller/DBImport/",
-    benchmark:
-        "run_times/create_cohort_map_file.tsv"
-    conda:
-        "../envs/environment.yaml"
-    shell:
-        "for i in {params.mapDir}*.map; do cat $i >> {output}; done"
-
-
-rule combine_gvcfs:
-    input:
-        ref=path_sanitize(refGenome),
-        i1=path_sanitize(refGenome + ".amb"),
-        i2=path_sanitize(refGenome + ".ann"),
-        i3=path_sanitize(refGenome + ".bwt"),
-        i4=path_sanitize(refGenome + ".pac"),
-        i5=path_sanitize(refGenome + ".sa"),
-        i6=path_sanitize(refGenome + ".fai"),
-        i7=path_sanitize(dictionaryFile),
-        bed=path_sanitize(bedFile),
-        gvcf=(
-            expand("HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz", sample=sampleList)
-            if by_chrom
-            else expand("HaplotypeCaller/called/{sample}.g.vcf.gz", sample=sampleList)
+        temp("HaplotypeCaller/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
+            "HaplotypeCaller/called/gvcfs/{sample}_manifest.txt"
         ),
-        index=(
-            expand("HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz.tbi", sample=sampleList)
-            if by_chrom
-            else expand("HaplotypeCaller/called/{sample}.g.vcf.gz.tbi", sample=sampleList)
-        ),
-    output:
-        gvcf="HaplotypeCaller/called/all_chroms.g.vcf.gz",
-        idx="HaplotypeCaller/called/all_chroms.g.vcf.gz.tbi",
-    params:
-        gvcf=(
-            list(
-                map(
-                    "-V {}".format,
-                    expand(
-                        outputDir + "HaplotypeCaller/called/{sample}_all_chroms.g.vcf.gz",
-                        sample=sampleList,
-                    ),
-                )
-            )
-            if by_chrom
-            else list(
-                map(
-                    "-V {}".format,
-                    expand(
-                        outputDir + "HaplotypeCaller/called/{sample}.g.vcf.gz", sample=sampleList
-                    ),
-                )
-            )
-        ),
-    log:
-        "logs/gatk/combinegvcfs.log",
     resources:
+        machine_type="n1-standard-2"     
+    benchmark:
+        "run_times/HC_create_each_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else "run_times/HC_create_sample_manifest/{sample}_manifest.tsv"
+    shell:
+        "echo {input} > {output}"
+
+rule HC_create_cohort_manifest:
+    input:
+        expand(
+            "HaplotypeCaller/called/manifests/{{chrom}}/{sample}_manifest.txt", sample=sampleList
+        ) if by_chrom else expand(
+            "HaplotypeCaller/called/gvcfs/{sample}_manifest.txt", sample=sampleList
+        ),
+    output:
+        "HaplotypeCaller/called/gvcfs/manifest_{chrom}.txt" if by_chrom else "HaplotypeCaller/called/gvcfs/manifest.txt",
+    benchmark:
+        "run_times/HC_create_cohort_manifest/{chrom}_manifest.tsv" if by_chrom else "run_times/HC_create_cohort_manifest/manifest.tsv"
+    params:
+        manDir=(
+            outputDir + "HaplotypeCaller/called/manifests/{chrom}/"
+            if by_chrom
+            else outputDir + "HaplotypeCaller/called/gvcfs/"
+        ),
+    shell:
+        "for i in {params.manDir}*.txt; do cat $i >> {output}; done"
+
+
+#ideally this step is identical to all 3 callers and is only written once
+rule HC_GLmerge_gvcfs:
+    input:
+        l=(
+            expand("HaplotypeCaller/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList)
+            if by_chrom
+            else expand("HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz", sample=sampleList)
+        ),
+        m=(
+            "HaplotypeCaller/called/gvcfs/manifest_{chrom}.txt"
+            if by_chrom
+            else "HaplotypeCaller/called/gvcfs/manifest.txt"
+        ),
+        b="split_regions/{chrom}.bed" if by_chrom else bedFile
+    output:
+        temp("HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf") if by_chrom else 
+        temp("HaplotypeCaller/genotyped/HC_variants.bcf")
+    params:
+        workDir="HC_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else "HC_GLmerge_gvcfs/all_chrs",
+        config=glnexus_gatk_config,
+        memGB=glnexus_memGB
+    resources:
+        machine_type="n1-standard-8",
         runtime=2880,
-        mem_mb=16000
-    threads: 4
+        mem_mb=glnexus_memGB*1000 
+    threads: 8     
+    benchmark:
+        "run_times/HC_GLmerge_gvcfs/{chrom}/HC_GLmerge_gvcfs.tsv" if by_chrom else "run_times/HC_GLmerge_gvcfs/HC_GLmerge_gvcfs.tsv"
     conda:
-        "../envs/gatk4.yaml"
-    singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09' 
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
     shell:
-        'gatk --java-options "-Xmx16G" CombineGVCFs \
-                                {params.gvcf} \
-                                -R {input.ref} \
-                                -O {output.gvcf} '
+        "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
+        "if [ ! -f {params.workDir}/glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli -P {params.workDir}; chmod +x {params.workDir}/glnexus_cli; fi;"
+        "{params.workDir}/glnexus_cli --config {params.config} --dir {params.workDir}/GLnexus.DB  --bed {input.b} --list {input.m} -m {params.memGB} -t {threads} > {output};"
+        "rm {params.workDir}/glnexus_cli;"
 
 
-rule HC_genotype_gvcfs:
+rule HC_concatVariantsByChrom:
+    """Concatenating GLnexus merged bcf into single joined genotyped bcf,
+    when the by_chrom option is used
+    """
     input:
-        ref=path_sanitize(refGenome),
-        i1=path_sanitize(refGenome + ".amb"),
-        i2=path_sanitize(refGenome + ".ann"),
-        i3=path_sanitize(refGenome + ".bwt"),
-        i4=path_sanitize(refGenome + ".pac"),
-        i5=path_sanitize(refGenome + ".sa"),
-        i6=path_sanitize(refGenome + ".fai"),
-        i7=path_sanitize(dictionaryFile),
-        bed=path_sanitize(bedFile),
-        gvcf="HaplotypeCaller/called/all_chroms.g.vcf.gz",
-        idx="HaplotypeCaller/called/all_chroms.g.vcf.gz.tbi",
+        vcf=expand("HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf", chrom=chromList),
+        idx=expand("HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf.csi", chrom=chromList),
     output:
-        vcf="HaplotypeCaller/genotyped/HC_variants.vcf.gz",
-        idx="HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi",
-    log:
-        "logs/gatk/genotypegvcfs.log"
-    resources:
-        mem_mb=20480
+        temp("HaplotypeCaller/genotyped/HC_variants.bcf"),
+    benchmark:
+        "run_times/HC_concatVariantsByChrom/concatVariantsByChrom.tsv"
     conda:
-        "../envs/gatk4.yaml"
-    singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'    
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
     shell:
-        'gatk --java-options "-Xmx20G" GenotypeGVCFs \
-                              -V {input.gvcf} \
-                              -R {input.ref} \
-                              -O {output.vcf} \
-                              -stand-call-conf 30 \
-                                    -new-qual \
-                                    -G StandardAnnotation \
-                                    -G StandardHCAnnotation'
+        "bcftools concat -Ou -a {input.vcf} > {output}"
+
+
+rule HC_indexBCFByChrom:
+    input:
+        bcf="HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf",
+    output:
+        idx="HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf.csi",
+    benchmark:
+        "run_times/HC_indexBCFByChrom/{chrom}.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "bcftools index {input.bcf}"
+
+
+rule HC_concat_vcfs:
+    """Concatenate vcfs
+    """
+    input:
+        vcf=expand("HaplotypeCaller/called/{chrom}/{{sample}}.vcf.gz", chrom=chromList),
+        idx=expand("HaplotypeCaller/called/{chrom}/{{sample}}.vcf.gz.tbi", chrom=chromList),
+    output:
+        gz="HaplotypeCaller/called/vcfs/{sample}_all_chroms.vcf.gz",
+    params:
+        temp(directory("HC_concat_vcfs/{sample}/")),
+    benchmark:
+        "run_times/HC_concat_vcfs/{sample}.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "mkdir -p {params}; bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output.gz}" # sort -k1,1 -k2,2n > {output}'
+
+
+
+
+rule HC_compress_merged_vcfs:
+    input:
+        "HaplotypeCaller/genotyped/HC_variants.bcf",
+    output:
+        gz=protected("HaplotypeCaller/genotyped/HC_variants.vcf.gz"),
+        tbi=protected("HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi"),
+    benchmark:
+        "run_times/HC_compress_merged_vcfs/HC_variants.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "bcftools view --min-ac 1 {input} | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
+
 

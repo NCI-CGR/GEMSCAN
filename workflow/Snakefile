@@ -42,10 +42,15 @@ threads = config['threads']
 clusterMode = config['clusterMode']
 outputDir = config['outputDir']
 useRemoteFiles = config['useRemoteFiles']
+glnexus_memGB =  config['glnexus_memGB']
 
 if clusterMode == "gcp" or useRemoteFiles:
     from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
     GS = GSRemoteProvider()
+
+if clusterMode == "cluster":
+   outputDir = "./"
+
     
 #including the common functions
 include: "rules/common.smk"    
@@ -54,14 +59,19 @@ include: "rules/common.smk"
 if dv_mode:
     #modelPath = config['modelPath']
     #useShards = config['useShards']
+    glnexus_dv_config = config['glnexus_dv_config']
     model_type = config['model_type']
+    dv_memGB = config['dv_memGB']
 
 if strelka2_mode:
     bedFileGZ = config['bedFileGZ']
-    glnexusConfig = config['glnexusConfig']
+    glnexus_strelka2_config = config['glnexus_strelka2_config']
     exome_param = config['exome_param']
-    memGB = config['memGB']
+    strelka2_memGB = config['strelka2_memGB']
 
+if hc_mode:
+    glnexus_gatk_config = config['glnexus_gatk_config']
+    
 
 CALLERS = ['HC', 'DV', 'strelka2']  # used in harmonize module
 
@@ -76,19 +86,21 @@ dictionaryFile = refDir + '/' + refNoExt + '.dict'
 dt = str(datetime.now().strftime("%y-%m-%d-%H-%M"))
 #dt = str(config['dt'])
 
+#NOTUSED
 #get the list of bam files, assuming that .bai are in the same folder
-bamList = get_samples("../config/samples.txt")
-
+#bamList = get_samples("../config/samples.txt")
 # generate sampleList based on bam filenames and then we generate the sample to bam dict
-sampleList = [os.path.splitext(os.path.basename(f))[0] for f in bamList]
-sample2bam = dict(zip(sampleList, bamList))
-
+#sampleList = [os.path.splitext(os.path.basename(f))[0] for f in bamList]
+#sample2bam = dict(zip(sampleList, bamList))
 # generate sample names list from bam SM tags and then generate the sample to sm tag dic
 #get_all_sm_tag = lambda x: get_sm_tag(x)
 #smList = list(map(get_all_sm_tag, bamList))
 
-#temp solution of using filename as sample names
-#will add option to allow user input sample names
+#read in the samples table and create map
+samplesTable = read_samplesFile("../config/samples.txt")
+sampleList = samplesTable['sampleID']
+sample2bam =  dict(zip(samplesTable['sampleID'], samplesTable['bam']))
+sample2bamIndex = dict(zip(samplesTable['sampleID'], samplesTable['index']))
 sample2sm =  dict(zip(sampleList, sampleList))
 
 # read in chromosome list from reference dict file (assumes the dict is already created)

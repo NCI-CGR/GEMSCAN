@@ -1,0 +1,6 @@
+GEMSCAN expects config.yaml and samples.txt in the config directory.
+Please use config_template.yaml as a template to create your own config.yaml file.
+
+The samples.txt file expected a tab delimited file with these 3 columns:
+sampleID	bam	index
+where sampleID will the be sampleID used in the out VCF file, bam will be the full path to your bam/cram file, and index will be the full path to your bam/cram file index. Please note that even if your alignment file is in cram format, please keep the header as bam.
