@@ -7,8 +7,8 @@ GEMSCAN is a Joint variant calling with GATK4 HaplotypeCaller, Google DeepVarian
 - [Installation](Installation.md)
 - [Inputs and outputs](inputs_and_outputs.md)
 - [Running_on_DCEG_CCAD](ccad.md)
-- Running_on_NIH_Biowulf
-- Running_on_GCP
+- [Running_on_NIH_Biowulf](biowulf.md)
+- [Running_on_GCP](gcp.md)
 - Running_on_other_clusters
 
 ### Support or Contact
