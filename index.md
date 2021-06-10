@@ -4,7 +4,12 @@ GEMSCAN is a Joint variant calling with GATK4 HaplotypeCaller, Google DeepVarian
 
 ### Documentation
 
-The documentation of GEMSCAN is currently available on [readthedocs](https://gemscan.readthedocs.io/en/latest/)
+- Installation
+- Input_and_Output
+- Running_on_DCEG_CCAD
+- Running_on_NIH_Biowulf
+- Running_on_GCP
+- Running_on_other_clusters
 
 ### Support or Contact
 
