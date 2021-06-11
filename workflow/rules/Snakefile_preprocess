@@ -18,11 +18,12 @@ rule validate_bed_file:
         'run_times/validate_bed_file.tsv'
     conda:
         "envs/bedops.yaml"
-    singularity: "docker://dockerbiotools/bedops:latest"
+    singularity: "docker://dceoy/bedops:latest"
     log:
-        "logs/split_bed_file/split_bed_file.{chrom}.log"
+        "logs/validate_bed_file/validate_bed_file.log"
     shell:
-        "bedops --ec --everything {input.bed} && touch {output.validated}"
+        "bedops --ec --everything {input.bed} >/dev/null 2>logs/validate_bed_file/bedops.log;"
+        "! grep ^Error logs/validate_bed_file/bedops.log && touch {output.validated}"
 
 
 rule split_bed_file:
