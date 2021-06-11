@@ -182,7 +182,7 @@ rule Strelka2_GLmerge_gvcfs:
             else "strelka2/called/gvcfs/manifest.txt"
         ),
         b=path_sanitize(bedFile),
-        glnexusConfig=path_sanitize(glnexusConfig),
+        glnexusConfig=path_sanitize(glnexus_strelka2_config),
     output:
         temp("strelka2/genotyped/strelka2_variants_{chrom}.bcf") if by_chrom else temp(
             "strelka2/genotyped/strelka2_variants.bcf"
@@ -192,6 +192,12 @@ rule Strelka2_GLmerge_gvcfs:
             "Strelka2_GLmerge_gvcfs/" + "{chrom}/" if by_chrom
             else "Strelka2_GLmerge_gvcfs/"
         ),
+        memGB=glnexus_memGB
+    threads: 8    
+    resources:
+        machine_type="n1-standard-8",
+        runtime=2880,
+        mem_mb=glnexus_memGB*1000
     benchmark:
         "run_times/strelka2_GLmerge_gvcfs/{chrom}/GLmerge.tsv" if by_chrom else "run_times/strelka2_GLmerge_gvcfs/GLmerge.tsv"
     conda:
@@ -201,7 +207,7 @@ rule Strelka2_GLmerge_gvcfs:
     shell:
         "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
         "if [ ! -f {params.workDir}/glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli -P {params.workDir}; chmod +x {params.workDir}/glnexus_cli; fi;"
-        "{params.workDir}/glnexus_cli --config {input.glnexusConfig} --dir {params.workDir}/GLnexus.DB --bed {input.b} --list {input.m}  > {output};"
+        "{params.workDir}/glnexus_cli --config {input.glnexusConfig} --dir {params.workDir}/GLnexus.DB --bed {input.b} --list {input.m} -m {params.memGB} -t {threads} > {output};"
         "rm {params.workDir}/glnexus_cli;"
 
 
