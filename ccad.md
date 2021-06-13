@@ -23,6 +23,8 @@ modify ```config/samples.txt``` and ```config/config.yaml``` as described in [he
 
 module load singularity
 
+cd <cloned repo dir>/workflow
+
 snakemake  --profile profiles/ccad --use-singularity --singularity-args "--bind /DCEG" --jobs 100 --latency-wait 300 --rerun-incomplete
 ```
 
