@@ -1,7 +1,17 @@
 #!/bin/bash
+
+# properties = {properties}
+#$ -terse
+#$ -S /bin/bash
+#$ -cwd
+#$ -j yes
+
 # properties = {properties}
 
-# exit on first error
-set -o errexit
+
+set -euo pipefail
+
 
 {exec_job}
+
+echo $?

@@ -10,7 +10,7 @@ __options__:
     - "job_class"
 
 __default__:
-  queue: long.q
+  queue: "long.q"
   join: "yes"
   export_env: ""
   pe: "by_node 8"
