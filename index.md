@@ -20,4 +20,5 @@ Having trouble with GEMSCAN? Please check the FAQ below for commonly encountered
    - The default directory location for the image cache is **$HOME/.singularity/cache**. You may want to change the default cache location by setting the **SINGULARITY_CACHEDIR** environmental variable to another location if you have a small quota for your home directory.  
 - Job killed when pulling singularity images
    - From what I have seen singularity pull may require up to 2GB memory so to be safe please request at least 4GB for the Snakemake main job 
-
+- specifying runtime in resources under the rules
+   - Sometimes you may want to modify the time limit of a certain rule. Currently, the user would have to modify these in the Snakefile. Please note that GEMSCAN expects the runtime to be expressed in minutes, i.e. if you want to put a limit of 1 hour, please put runtime=60 
