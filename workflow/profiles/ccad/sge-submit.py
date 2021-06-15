@@ -156,6 +156,9 @@ def parse_qsub_settings(source, resource_mapping=RESOURCE_MAPPING, option_mappin
                 # requests as gigabytes
                 if (rkey == 's_vmem') or (rkey == 'h_vmem'):
                     job_options["resources"].update({rkey : str(sval) + 'G'})
+                #turn minutes into seconds - seems to be the default option for h_rt in sge
+                elif (rkey == 'h_rt'):
+                    job_options["resources"].update({rkey : int(sval)*60}) 
                 else:
                     job_options["resources"].update({rkey : sval})
                 break
