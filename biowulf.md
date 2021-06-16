@@ -7,12 +7,12 @@
 ```git clone https://github.com/NCI-CGR/GEMSCAN.git```
 
   This would clone the GEMSCAN github repository under your current folder, i.e. <your current dir>/GEMSCAN
-  Alternatively, You could create a project folder say *my_variantCalling_project* by
+  Alternatively, You could create a project folder say _my_variantCalling_project_ by
   ```mkdir my_variantCalling_project```
   and then clone the GEMSCAN repo to it:
   ```git clone https://github.com/NCI-CGR/GEMSCAN.git ./my_variantCalling_project```
 
-- create config/samples.txt and config/config.yaml as described in [here](inputs_and_outputs.md)
+- create config/samples.txt and config/config.yaml as described in the [Inputs and outputs](inputs_and_outputs.md) section.
 
 - go to workflow directory
 
