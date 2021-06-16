@@ -28,12 +28,21 @@ cd <cloned repo dir>/workflow
 snakemake  --profile profiles/ccad --use-singularity --singularity-args "--bind /DCEG" --jobs 100 --latency-wait 300 --rerun-incomplete
 ```
 
-- submit the script 
+#### submit the script 
 
-	```qsub -q long.q -V -j y -cwd -o ${PWD} <script>```
+```qsub -q long.q -V -j y -cwd -o ${PWD} <script>```
 
-- monitor the jobs
+#### monitor the jobs
 
-	```qstat```
+```qstat```
 
-- The log files are in ```<cloned repo dir>/workflow/logs/```, it is also useful to look at ```<cloned repo dir>/workflow/<script>.o<jobid>``` for snakemake logs
+The log files are in ```<cloned repo dir>/workflow/logs/```, it is also useful to look at ```<cloned repo dir>/workflow/<script>.o<jobid>``` for snakemake logs
+
+#### Fine tuning the pipeline
+
+- To change the queue a particular rule is being submit to, you can edit the _profiles/ccad/cluster.yaml_ file. For example, adding
+```
+HC_call_variants :
+     queue : bigmem.q
+```     
+to the _profiles/ccad/cluster.yaml_ file tells GEMSCAN to submit the  _HC_call_variants_ jobs to bigmem.q 	
