@@ -42,5 +42,25 @@ Please create the config.yaml file from the config_template.yaml and edit accord
 Depends on run mode selected in the config, but can include:
 Multi-sample VCF called with DeepVariant
 Multi-sample VCF called with HaplotypeCaller
-Multi-sample VCF called with Strelka2
-Multi-sample VCF containing the union of the DeepVariant, HaplotypeCaller and Strelka2 calls
+##### Multi-sample VCF called with Strelka2
+Strelka2 output includes filtered calls (with FILTER IndelConflict, SiteConflict, LowGQX, HighDPFRatio, HighSNVSB, HighDepth, LowDepth). 
+
+##### ensenbled variants
+If runMode is set to TURE for streka2, haplotypeCaller, deepVariant and harmonize, you should find a multi-sample VCF file containing the union of the DeepVariant, HaplotypeCaller and Strelka2 calls: all_callers_merged_genotypes.vcf.gz(.tbi). Please note that the FILTER field in this VCF file is set to be one of the following: oneCaller, twoCallers, and threeCallers. Many of the variant evaluation and analysis tools would filter any variant without PASS or . in the FILTER field by default. Please be extra careful with this. 
+
+We also generated the several ensemble genotypes (GT) fields with various degree of confidence to fit different purposes:
+- ensembled GT in the final output (GT):
+  If all 3 callers have calls: 
+     any of the two callers are concordant:  GT is set to that concordant GT; 
+none are concordant: GT is set to ./.
+If only 2 callers have calls:
+they are concordant: GT is set to that concordant GT;
+they are not concordant: GT is set to ./.
+If only one caller has call, it's set to that GT
+- Majority concensus voting (concensus_GT):
+If only one caller has call, it's set to ./.
+- DV priority voting (dv_priority_GT):
+If there is DV call, set to that GT
+If there's no DV call:
+HC and strelka2 calls the same genotype, GT is set to that genotype
+Otherwise GT is set to ./.
