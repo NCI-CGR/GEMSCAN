@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # Authors: Shalabh Suman, Bari Ballew, Wendy Wong
 
+import math
+
 """HaplotyeCaller module of CGR germline variant calling pipeline
 """
 
@@ -149,7 +151,7 @@ rule HC_GLmerge_gvcfs:
     params:
         workDir="HC_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else "HC_GLmerge_gvcfs/all_chrs",
         config=glnexus_gatk_config,
-        memGB=glnexus_memGB
+        memGB=math.floor(glnexus_memGB*0.9)
     resources:
         machine_type="n1-standard-8",
         runtime=2880,

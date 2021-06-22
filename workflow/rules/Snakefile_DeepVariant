@@ -3,6 +3,7 @@
 
 import os
 import subprocess
+import math
 
 """DeepVariant module of CGR germline variant calling pipeline
 """
@@ -149,7 +150,7 @@ rule DV_GLmerge_gvcfs:
     params:
         workDir="DV_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else "DV_GLmerge_gvcfs/all_chrs",
         config=glnexus_dv_config,
-        memGB=glnexus_memGB
+        memGB=math.floor(glnexus_memGB*0.9)
     resources:
         machine_type="n1-standard-8",
         runtime=2880,
