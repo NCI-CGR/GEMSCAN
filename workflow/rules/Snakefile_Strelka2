@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+# Author: Wendy Wong
+
+import math
+
 """Strelka2 module of CGR germline variant calling pipeline
 """
 
@@ -192,7 +197,7 @@ rule Strelka2_GLmerge_gvcfs:
             "Strelka2_GLmerge_gvcfs/" + "{chrom}/" if by_chrom
             else "Strelka2_GLmerge_gvcfs/"
         ),
-        memGB=glnexus_memGB
+        memGB=math.floor(glnexus_memGB*0.9)
     threads: 8    
     resources:
         machine_type="n1-standard-8",
