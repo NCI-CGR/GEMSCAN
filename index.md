@@ -22,3 +22,4 @@ Having trouble with GEMSCAN? Please check the FAQ below for commonly encountered
    - From what I have seen singularity pull may require up to 2GB memory so to be safe please request at least 4GB for the Snakemake main job 
 - specifying runtime in resources under the rules
    - Sometimes you may want to modify the time limit of a certain rule. Currently, the user would have to modify these in the Snakefile. Please note that GEMSCAN expects the runtime to be expressed in minutes, i.e. if you want to put a limit of 1 hour, please put runtime=60 
+- We have not tested the pipeline with huge number of samples and some of the rules may require much longer running time than the default settings. If your job is killed due to time limits please try to add time to resources in the rules or edit profiles/biowulf/cluster_config.yaml to increase the default time limit, if you are on biowulf.  
