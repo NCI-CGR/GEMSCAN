@@ -27,7 +27,7 @@ rule Strelka2_norm_left_align_split:
         "../envs/environment.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
     shell:
-        "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} | bcftools view --min-ac 1 -Oz -o {output}"
+        "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} | bcftools view --min-ac 1 --threads {threads}  -Oz -o {output}"
 
 
 rule HC_norm_left_align_split:
