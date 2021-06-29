@@ -1,7 +1,7 @@
 ## Installation
 The installation procese for the GEMSCAN pipeline is as follows:
 
-- Install or activate [conda](https://docs.conda.io/en/latest/)
+- Install a Conda-based Python3 distribution or activate [conda](https://docs.conda.io/en/latest/)
 - If needed, install git
 - Clone the GEMSCAN [repository](https://github.com/NCI-CGR/GEMSCAN/)
 - Navigate into the repository directory
