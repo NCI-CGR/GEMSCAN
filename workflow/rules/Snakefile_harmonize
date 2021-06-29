@@ -22,6 +22,8 @@ rule Strelka2_norm_left_align_split:
         "ensemble/strelka2_normalized.vcf.gz",
     benchmark:
         "run_times/strelka2_norm_left-align_split/norm.tsv"
+    resources:
+        runtime=max(120, num_of_samples)
     threads: threads
     conda:
         "../envs/environment.yaml"
@@ -41,6 +43,8 @@ rule HC_norm_left_align_split:
         "ensemble/HC_normalized.vcf.gz",
     benchmark:
         "run_times/HC_norm_left-align_split/norm.tsv"
+    resources:
+        runtime=max(120, num_of_samples)
     threads: threads
     conda:
         "../envs/environment.yaml"
@@ -60,6 +64,8 @@ rule DV_norm_left_align_split:
         "ensemble/DV_normalized.vcf.gz",
     benchmark:
         "run_times/DV_norm_left-align_split/norm.tsv"
+    resources:
+        runtime=max(120, num_of_samples)
     threads: threads
     conda:
         "../envs/environment.yaml"

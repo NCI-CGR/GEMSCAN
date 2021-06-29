@@ -102,6 +102,8 @@ sampleList = samplesTable['sampleID']
 sample2bam =  dict(zip(samplesTable['sampleID'], samplesTable['bam']))
 sample2bamIndex = dict(zip(samplesTable['sampleID'], samplesTable['index']))
 sample2sm =  dict(zip(sampleList, sampleList))
+num_of_samples = len(sampleList)
+
 
 # read in chromosome list from reference dict file (assumes the dict is already created)
 # this circumvents the issue of whether to use hg19-style or b37-style chromosome annotation
