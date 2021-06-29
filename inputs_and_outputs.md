@@ -21,14 +21,19 @@ Note that if the input files are on google storage please also use ``gs://`` as 
 Also note that while on-prem/local runs can take advantage of remote files, currently it may cause unexpected errors when multiple tasks try to download the same file into the same location. This will be solved in the next release.
 
 ### bed file
-Currently, the pipeline requires a bed file and a gzipped bed file for both exome, tagetted and WGS. The bedfile needed to be sorted propoerly.
-We have included a simple check as the first task when running the pipeline
+Currently, the pipeline requires a bed file and a gzipped bed file for both exome, tagetted and WGS. 
+The plan is to make the bed file optional if the data is WES or WGS, but for the moment you could generate the bed file by:
 ```
-bedops --ec --everything {input.bed} >/dev/null
+awk '{print $1 "\t0\t" $2}'  <fasta file>.fai > <your bedfile>
 ```
-It is better to use the above command to see if you get any error message before running the pipeline.
 
-If you see ```Error executing rule validate_bed_file on cluster``` in your snakemake log file, chances are your bed file did not pass the *bedops* validation. Please check ```logs/validate_bed_file/bedops.log``` to see the error message from *bedops* validation.
+The bedfile needed to be sorted propoerly. We have included a simple check as the first task when running the pipeline, it would fail if the bed file is not sorted. 
+```
+sort -k 1,1 -k2,2n <your bedfile> > <your sorted bedfile>
+```
+Therefore, it is better to use the above command to sort your bed file.
+
+If you see ```Error executing rule validate_bed_file on cluster``` in your snakemake log file, chances are your bed file did not pass the *bedops* validation. Please check ```logs/validate_bed_file/bedtools_merge.log``` to see the error message from *bedtools* validation.
 
 #### Config file
 
