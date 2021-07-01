@@ -22,12 +22,14 @@ rule Strelka2_norm_left_align_split:
         "ensemble/strelka2_normalized.vcf.gz",
     benchmark:
         "run_times/strelka2_norm_left-align_split/norm.tsv"
+    resources:
+        runtime=max(120, num_of_samples)
     threads: threads
     conda:
         "../envs/environment.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
     shell:
-        "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} | bcftools view --min-ac 1 -Oz -o {output}"
+        "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} | bcftools view --min-ac 1 --threads {threads}  -Oz -o {output}"
 
 
 rule HC_norm_left_align_split:
@@ -41,6 +43,8 @@ rule HC_norm_left_align_split:
         "ensemble/HC_normalized.vcf.gz",
     benchmark:
         "run_times/HC_norm_left-align_split/norm.tsv"
+    resources:
+        runtime=max(120, num_of_samples)
     threads: threads
     conda:
         "../envs/environment.yaml"
@@ -60,6 +64,8 @@ rule DV_norm_left_align_split:
         "ensemble/DV_normalized.vcf.gz",
     benchmark:
         "run_times/DV_norm_left-align_split/norm.tsv"
+    resources:
+        runtime=max(120, num_of_samples)
     threads: threads
     conda:
         "../envs/environment.yaml"
