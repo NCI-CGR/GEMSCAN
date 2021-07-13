@@ -21,10 +21,15 @@ Note that if the input files are on google storage please also use ``gs://`` as 
 Also note that while on-prem/local runs can take advantage of remote files, currently it may cause unexpected errors when multiple tasks try to download the same file into the same location. This will be solved in the next release.
 
 ### bed file
-Currently, the pipeline requires a bed file and a gzipped bed file for both exome, tagetted and WGS. 
+Currently, the pipeline requires a bed file and a bgzipped bed file (with index) for both exome, tagetted and WGS. 
 The plan is to make the bed file optional if the data is WES or WGS, but for the moment you could generate the bed file by:
 ```
 awk '{print $1 "\t0\t" $2}'  <fasta file>.fai > <your bedfile>
+```
+and then bgzip and index it 
+```
+cat <your bedfile> | bgzip -c ><your bedfile>.gz
+tabix -p bed <your bedfile>
 ```
 
 The bedfile needed to be sorted propoerly. We have included a simple check as the first task when running the pipeline, it would fail if the bed file is not sorted. 
