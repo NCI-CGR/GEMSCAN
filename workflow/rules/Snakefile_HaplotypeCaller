@@ -98,7 +98,7 @@ rule HC_create_each_sample_manifest:
     line character limits when run at scale.
     """
     input:
-        "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz" if by_chrom else "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz",
+        "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz" if by_chrom else "HaplotypeCaller/called/{sample}.g.vcf.gz",
     output:
         temp("HaplotypeCaller/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
             "HaplotypeCaller/called/gvcfs/{sample}_manifest.txt"
@@ -137,7 +137,7 @@ rule HC_GLmerge_gvcfs:
         l=(
             expand("HaplotypeCaller/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList)
             if by_chrom
-            else expand("HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz", sample=sampleList)
+            else expand("HaplotypeCaller/called/{sample}.g.vcf.gz", sample=sampleList)
         ),
         m=(
             "HaplotypeCaller/called/gvcfs/manifest_{chrom}.txt"
@@ -189,13 +189,16 @@ rule HC_concatVariantsByChrom:
         "bcftools concat -Ou -a {input.vcf} > {output}"
 
 
-rule HC_indexBCFByChrom:
+rule HC_indexBCF:
     input:
-        bcf="HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf",
+        bcf=("HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf" if by_chrom
+             else "HaplotypeCaller/genotyped/HC_variants.bcf"),
     output:
-        idx="HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf.csi",
+        idx=("HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf.csi" if by_chrom
+             else "HaplotypeCaller/genotyped/HC_variants.bcf.csi"),
     benchmark:
-        "run_times/HC_indexBCFByChrom/{chrom}.tsv"
+        "run_times/HC_indexBCF/HC_indexBCF.{chrom}.tsv" if by_chrom
+	     else "run_times/HC_indexBCF/HC_indexBCF.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
