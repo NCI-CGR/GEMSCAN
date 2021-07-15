@@ -27,7 +27,9 @@
 	#SBATCH -e <cloned repo dir>/workflow/snakemake.err
 	
 	module load singularity
-	conda activate snakemake
+	
+	eval "$(conda shell.bash hook)"
+        conda activate snakemake
 	
 	snakemake  --profile profiles/biowulf --use-singularity --singularity-args "--bind /data/$USER,/fdb,/scratch,/lscratch" --jobs 100
   ```
