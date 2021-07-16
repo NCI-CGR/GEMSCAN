@@ -28,6 +28,8 @@
 	
 	module load singularity
 	
+	export SINGULARITY_CACHEDIR=/data/<yourusername>/
+	
 	eval "$(conda shell.bash hook)"
         conda activate snakemake
 	
