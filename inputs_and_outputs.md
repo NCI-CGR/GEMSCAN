@@ -32,9 +32,9 @@ cat <your bedfile> | bgzip -c ><your bedfile>.gz
 tabix -p bed <your bedfile>
 ```
 
-The bedfile needed to be sorted propoerly. We have included a simple check as the first task when running the pipeline, it would fail if the bed file is not sorted. 
+The bedfile needed to be sorted propoerly. We have included a simple check as the first task when running the pipeline, it would fail if the bed file is not sorted. Also, some of the variant calling tools would fail when there are duplicated regions in the bedfile, use mergeBed from bedtools to obtain unique regions before feeding the bed file to the pipeline.
 ```
-sort -k 1,1 -k2,2n <your bedfile> > <your sorted bedfile>
+sort -k 1,1 -k2,2n <your bedfile>  | mergeBed -i stdin  > <your sorted bedfile>
 ```
 Therefore, it is better to use the above command to sort your bed file.
 
