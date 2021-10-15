@@ -33,7 +33,7 @@
 	eval "$(conda shell.bash hook)"
         conda activate snakemake
 	
-	snakemake  --profile profiles/biowulf --use-singularity --singularity-args "--bind /data/$USER,/fdb,/scratch,/lscratch" --jobs 100
+	snakemake  --profile profiles/biowulf --use-singularity --singularity-args "--bind /data/$USER,/fdb,/lscratch" --jobs 100
   ```
 
 	One thing to pay attention to is that if any data you use is not on the list of directories listed in the example script above, you will have to add them to --singularity-args after --bind, so that singularity will bind those folders as well.  
