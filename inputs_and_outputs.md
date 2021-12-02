@@ -1,13 +1,13 @@
 ## Pipeline inputs and outputs
 
-#### Input
+### Input
 
 In the config folder, please edit the samples.txt to list the aligned BAM files, one on each line. 
 We also assume that the BAM file index are in the same directory and are with the name ``<bam_filename>.bai``
 
-#### samples.txt
+### samples.txt
 
-In the config folder, please create the tab delimited samples.txt to list the sample names, aligned BAM files, and their index, one on each line. Please make sure that you include the header  'sampleID	bam	index' as well. 
+In the config folder, please create the tab delimited samples.txt to list the sample names, aligned BAM files, and their index, one on each line. Please make sure that you include the header  'sampleID	bam	index' as well. The pipeline supports cram files as well, when cram files are used, please keep the headers the same (do not change the header to cram).
 For example:
 ```
 sampleID	bam	index
@@ -19,6 +19,13 @@ The pipeline *does* support CRAM file input, please list your CRAM files under t
 
 Note that if the input files are on google storage please also use ``gs://`` as the prefix. The pipeline uses the prefix to determine whether they are remote files.
 Also note that while on-prem/local runs can take advantage of remote files, currently it may cause unexpected errors when multiple tasks try to download the same file into the same location. This will be solved in the next release.
+
+### reference files
+
+The config file requires refGenome which points to the fasta file of the reference genome used for aligning the bam/cram files. The pipeline expects to find other relevant files in the same folder. 
+For GATK might be the easiest to just download the GATK reference bundle [here](https://github.com/bahlolab/bioinfotools/blob/master/GATK/resource_bundle.md)
+For Strelka2 and Deep Variant, only fasta and its index .fai files are required.
+
 
 ### bed file
 Currently, the pipeline requires a bed file and a bgzipped bed file (with index) for both exome, tagetted and WGS. 
