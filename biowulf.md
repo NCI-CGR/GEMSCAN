@@ -21,7 +21,7 @@
 - You might want to create a submission script that looks like this
 
 	```
-        #!/bin/bash
+	#!/bin/bash
 	#SBATCH --time=2-00:00:00
 	#SBATCH -o <cloned repo dir>/workflow/snakemake.out
 	#SBATCH -e <cloned repo dir>/workflow/snakemake.err
@@ -39,7 +39,7 @@
 - If you have lots of samples, you may want to keep your main Snakemake workflow manager running until all the tasks finishes and it may exceed the maximum wall time of the norm partition on Biowulf. In that case you may want to use the unlimited partition, i.e.
 	
 	```
-        #!/bin/bash
+	#!/bin/bash
 	#SBATCH --partition=unlimited	
 	#SBATCH -o <cloned repo dir>/workflow/snakemake.out
 	#SBATCH -e <cloned repo dir>/workflow/snakemake.err
