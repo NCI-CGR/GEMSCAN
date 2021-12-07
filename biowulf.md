@@ -36,6 +36,24 @@
 	snakemake  --profile profiles/biowulf --use-singularity --singularity-args "--bind /data/$USER,/fdb,/lscratch" --jobs 100
   ```
 
+- If you have lots of samples, you may want to keep your main Snakemake workflow manager running until all the tasks finishes and it may exceed the maximum wall time of the norm partition on Biowulf. In that case you may want to use the unlimited partition, i.e.
+	
+	```
+        #!/bin/bash
+	#SBATCH --partition=unlimited	
+	#SBATCH -o <cloned repo dir>/workflow/snakemake.out
+	#SBATCH -e <cloned repo dir>/workflow/snakemake.err
+	
+	module load singularity
+	
+	export SINGULARITY_CACHEDIR=/data/<yourusername>/
+	
+	eval "$(conda shell.bash hook)"
+        conda activate snakemake
+	
+	snakemake  --profile profiles/biowulf --use-singularity --singularity-args "--bind /data/$USER,/fdb,/lscratch" --jobs 100
+  ```
+	
 	One thing to pay attention to is that if any data you use is not on the list of directories listed in the example script above, you will have to add them to --singularity-args after --bind, so that singularity will bind those folders as well.  
 
 - Make sure you have a relatively updated Snakemake in your conda environment (>=5.26.1).  Then activate the snakemake conda environment created in the installation step 
