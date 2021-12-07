@@ -21,7 +21,7 @@
 - You might want to create a submission script that looks like this
 
 	```
-  #!/bin/bash
+        #!/bin/bash
 	#SBATCH --time=2-00:00:00
 	#SBATCH -o <cloned repo dir>/workflow/snakemake.out
 	#SBATCH -e <cloned repo dir>/workflow/snakemake.err
