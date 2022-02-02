@@ -122,13 +122,13 @@ rule recombine_headers_and_vars:
     benchmark:
         "run_times/recombine_headers_and_vars/{caller}.tsv" # threads:
     params:
-        v=outputDir + "ensemble/{caller}_labeled.vcf",
+        v=outputDir + "ensemble/{caller}_labeled.vcf.gz",
     conda:
         "../envs/environment.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
     shell:
-        "cat {input.h} {input.v} > {params.v};"
-        "bgzip {params.v}; tabix -p vcf {output.g}"
+        "cat {input.h} {input.v} | bgzip -c > {params.v};"
+        "tabix -p vcf {output.g}"
 
 
 rule merge_by_variant:
