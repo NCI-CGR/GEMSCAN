@@ -3,6 +3,7 @@
 
 import os
 import subprocess
+from glob import glob
 
 """DeepVariant module of CGR germline variant calling pipeline
 """
@@ -18,12 +19,12 @@ rule DV_concatVariantsByChrom:
     when the by_chrom option is used
     """
     input:
-        vcf=expand("deepVariant/genotyped/DV_variants_{chrom}.bcf", chrom=chromList),
-        idx=expand("deepVariant/genotyped/DV_variants_{chrom}.bcf.csi", chrom=chromList),
+        vcf=expand(outputDir +  "deepVariant/genotyped/DV_variants_{chrom}.bcf", chrom=chromList),
+        idx=expand(outputDir +  "deepVariant/genotyped/DV_variants_{chrom}.bcf.csi", chrom=chromList),
     output:
-        temp("deepVariant/genotyped/DV_variants.bcf"),
+        temp(outputDir +  "deepVariant/genotyped/DV_variants.bcf"),
     benchmark:
-        "run_times/DV_concatVariantsByChrom/concatVariantsByChrom.tsv"
+        outputDir +  "run_times/DV_concatVariantsByChrom/concatVariantsByChrom.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -34,11 +35,11 @@ rule DV_concatVariantsByChrom:
 
 rule DV_indexBCFByChrom:
     input:
-        bcf="deepVariant/genotyped/DV_variants_{chrom}.bcf",
+        bcf=outputDir +  "deepVariant/genotyped/DV_variants_{chrom}.bcf",
     output:
-        idx="deepVariant/genotyped/DV_variants_{chrom}.bcf.csi",
+        idx=outputDir +  "deepVariant/genotyped/DV_variants_{chrom}.bcf.csi",
     benchmark:
-        "run_times/DV_indexBCFByChrom/{chrom}.tsv"
+        outputDir +  "run_times/DV_indexBCFByChrom/{chrom}.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -51,14 +52,14 @@ rule DV_concat_vcfs:
     """Concatenate vcfs
     """
     input:
-        vcf=expand("deepVariant/called/{chrom}/{{sample}}.vcf.gz", chrom=chromList),
-        idx=expand("deepVariant/called/{chrom}/{{sample}}.vcf.gz.tbi", chrom=chromList),
+        vcf=expand(outputDir +  "deepVariant/called/{chrom}/{{sample}}.vcf.gz", chrom=chromList),
+        idx=expand(outputDir +  "deepVariant/called/{chrom}/{{sample}}.vcf.gz.tbi", chrom=chromList),
     output:
-        gz="deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz",
+        gz=outputDir + "deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz",
     params:
-        temp(directory("DV_concat_vcfs/{sample}/")),
+        temp(directory(outputDir + "DV_concat_vcfs/{sample}/")),
     benchmark:
-        "run_times/DV_concat_vcfs/{sample}.tsv"
+        outputDir +  "run_times/DV_concat_vcfs/{sample}.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -74,39 +75,56 @@ rule DV_create_each_sample_manifest:
     line character limits when run at scale.
     """
     input:
-        "deepVariant/called/{chrom}/{sample}.g.vcf.gz" if by_chrom else "deepVariant/called_by_sample/{sample}.g.vcf.gz",
+        outputDir +  "deepVariant/called/{chrom}/{sample}.g.vcf.gz" if by_chrom else outputDir +  "deepVariant/called_by_sample/{sample}.g.vcf.gz",
     output:
-        temp("deepVariant/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
-            "deepVariant/called/gvcfs/{sample}_manifest.txt"
+        temp(outputDir +  "deepVariant/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
+            outputDir +  "deepVariant/called/gvcfs/{sample}_manifest.txt"
         ),
     resources:
         machine_type="n1-standard-2"     
     benchmark:
-        "run_times/DV_create_each_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else "run_times/DV_create_sample_manifest/{sample}_manifest.tsv"
+        outputDir +  "run_times/DV_create_each_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else outputDir +  "run_times/DV_create_sample_manifest/{sample}_manifest.tsv"
     shell:
         "echo {input} > {output}"
 
 
 rule DV_create_cohort_manifest:
     input:
+        # expand(
+            # outputDir +  "deepVariant/called/manifests/{{chrom}}/{sample}_manifest.txt", sample=sampleList
+        # ) if by_chrom else expand(
+            # outputDir +  "deepVariant/called/gvcfs/{sample}_manifest.txt", sample=sampleList
+        # ),
         expand(
-            "deepVariant/called/manifests/{{chrom}}/{sample}_manifest.txt", sample=sampleList
+            outputDir +  "deepVariant/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList, chrom=chromList
         ) if by_chrom else expand(
-            "deepVariant/called/gvcfs/{sample}_manifest.txt", sample=sampleList
-        ),
+            outputDir +  "deepVariant/called_by_sample/{sample}.g.vcf.gz", sample=sampleList, chrom=chromList
+        ),        
     output:
-        "deepVariant/called/gvcfs/manifest_{chrom}.txt" if by_chrom else "deepVariant/called/gvcfs/manifest.txt",
+        outputDir +  "deepVariant/called/gvcfs/{chrom}/manifest.txt" if by_chrom else outputDir +  "deepVariant/called/gvcfs/manifest.txt",
     benchmark:
-        "run_times/DV_create_cohort_manifest/{chrom}_manifest.tsv" if by_chrom else "run_times/DV_create_cohort_manifest/manifest.tsv"
-    params:
-        manDir=(
-            outputDir + "deepVariant/called/manifests/{chrom}/"
-            if by_chrom
-            else outputDir + "deepVariant/called/gvcfs/"
-        ),
-    shell:
-        "for i in {params.manDir}*.txt; do cat $i >> {output}; done"
-
+        outputDir +  "run_times/DV_create_cohort_manifest/{chrom}_manifest.tsv" if by_chrom else outputDir +  "run_times/DV_create_cohort_manifest/manifest.tsv"
+    # params:
+        # manDir=(
+            # outputDir + "deepVariant/called/manifests/{chrom}/"
+            # if by_chrom
+            # else outputDir + "deepVariant/called/gvcfs/"
+        # ),
+    run:
+        if by_chrom:
+            for manDir in output:
+                chr = os.path.basename(os.path.dirname(manDir))
+                with open(os.path.dirname(manDir) + '/manifest.txt', 'w') as outfile:
+                    inDir = os.path.dirname(manDir).strip('gvcfs/')
+                    print(inDir)
+                    #for item in (glob('/' + inDir + wildcards.sample + '.g.vcf.gz')):     
+                    for item in input:                        
+                        outfile.write("%s\n" % item)                       
+        else:
+            with open(output[0], 'w') as outfile: 
+                for item in input:
+                    outfile.write("%s\n" % item)
+        
 
 rule DV_GLmerge_gvcfs:
     """Merge gvcfs into one multi-sample vcf
@@ -132,31 +150,31 @@ rule DV_GLmerge_gvcfs:
     """
     input:
         l=(
-            expand("deepVariant/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList)
+            expand(outputDir +  "deepVariant/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList)
             if by_chrom
-            else expand("deepVariant/called_by_sample/{sample}.g.vcf.gz", sample=sampleList)
+            else expand(outputDir +  "deepVariant/called_by_sample/{sample}.g.vcf.gz", sample=sampleList)
         ),
         m=(
-            "deepVariant/called/gvcfs/manifest_{chrom}.txt"
+            outputDir +  "deepVariant/called/gvcfs/{chrom}/manifest.txt"
             if by_chrom
-            else "deepVariant/called/gvcfs/manifest.txt"
+            else outputDir +  "deepVariant/called/gvcfs/manifest.txt"
         ),
         b="split_regions/{chrom}.bed" if by_chrom else bedFile,
     output:
-        temp("deepVariant/genotyped/DV_variants_{chrom}.bcf") if by_chrom else temp(
-            "deepVariant/genotyped/DV_variants.bcf"
+        outputDir +  "deepVariant/genotyped/DV_variants_{chrom}.bcf" if by_chrom else temp(
+            outputDir +  "deepVariant/genotyped/DV_variants.bcf"
         ),
     params:
-        workDir="DV_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else "DV_GLmerge_gvcfs/all_chrs",
+        workDir=outputDir + "DV_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else outputDir + "DV_GLmerge_gvcfs/all_chrs",
         config=glnexus_dv_config,
         memGB=glnexus_memGB
     resources:
         machine_type="n1-standard-8",
-        runtime=2880,
+        #runtime=2880,
         mem_mb=glnexus_memGB*1000 
     threads: 8     
     benchmark:
-        "run_times/DV_GLmerge_gvcfs/{chrom}/DV_GLmerge_gvcfs.tsv" if by_chrom else "run_times/DV_GLmerge_gvcfs/DV_GLmerge_gvcfs.tsv"
+        outputDir +  "run_times/DV_GLmerge_gvcfs/{chrom}/DV_GLmerge_gvcfs.tsv" if by_chrom else outputDir +  "run_times/DV_GLmerge_gvcfs/DV_GLmerge_gvcfs.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -173,12 +191,12 @@ rule DV_compress_merged_vcfs:
     Ading --min-ac 1 here so that no calls after GLnexus merge are not in the final output
     """
     input:
-        "deepVariant/genotyped/DV_variants.bcf",
+        outputDir +  "deepVariant/genotyped/DV_variants.bcf",
     output:
-        gz=protected("deepVariant/genotyped/DV_variants.vcf.gz"),
-        tbi=protected("deepVariant/genotyped/DV_variants.vcf.gz.tbi"),
+        gz=protected(outputDir +  "deepVariant/genotyped/DV_variants.vcf.gz"),
+        tbi=protected(outputDir +  "deepVariant/genotyped/DV_variants.vcf.gz.tbi"),
     benchmark:
-        "run_times/DV_compress_merged_vcfs/DV_variants.tsv"
+        outputDir +  "run_times/DV_compress_merged_vcfs/DV_variants.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -196,24 +214,24 @@ rule DV_run_deepvariant:
         bed="split_regions/{chrom}.bed" if by_chrom else bedFile,
     output:
         vcf=(
-            "deepVariant/called/{chrom}/{sample}.vcf.gz"
+            outputDir +  "deepVariant/called/{chrom}/{sample}.vcf.gz"
             if by_chrom
-            else "deepVariant/called_by_sample/{sample}.vcf.gz"
+            else outputDir +  "deepVariant/called_by_sample/{sample}.vcf.gz"
         ),
         vcf_tbi=(
-            "deepVariant/called/{chrom}/{sample}.vcf.gz.tbi"
+            outputDir +  "deepVariant/called/{chrom}/{sample}.vcf.gz.tbi"
             if by_chrom
-            else "deepVariant/called_by_sample/{sample}.vcf.gz.tbi"
+            else outputDir +  "deepVariant/called_by_sample/{sample}.vcf.gz.tbi"
         ),
         gvcf=(
-            "deepVariant/called/{chrom}/{sample}.g.vcf.gz"
+            outputDir +  "deepVariant/called/{chrom}/{sample}.g.vcf.gz"
             if by_chrom
-            else "deepVariant/called_by_sample/{sample}.g.vcf.gz"
+            else outputDir +  "deepVariant/called_by_sample/{sample}.g.vcf.gz"
         ),
         gvcf_tbi=(
-            "deepVariant/called/{chrom}/{sample}.g.vcf.gz.tbi"
+            outputDir +  "deepVariant/called/{chrom}/{sample}.g.vcf.gz.tbi"
             if by_chrom
-            else "deepVariant/called_by_sample/{sample}.g.vcf.gz.tbi"
+            else outputDir +  "deepVariant/called_by_sample/{sample}.g.vcf.gz.tbi"
         ),
     params:
         model_type=model_type,
@@ -225,11 +243,11 @@ rule DV_run_deepvariant:
         #model_dir=get_DV_model_path(model_type)
     resources:
         machine_type="n1-standard-8",
-        runtime=2880,
+        #runtime=2880,
         mem_mb=dv_memGB*1000
     threads: 8
     benchmark:
-        "run_times/DV_run_deepvariant/{chrom}/{sample}.tsv" if by_chrom else "run_times/DV_run_deepvariant/{sample}.tsv"
+        outputDir +  "run_times/DV_run_deepvariant/{chrom}/{sample}.tsv" if by_chrom else outputDir +  "run_times/DV_run_deepvariant/{sample}.tsv"
     conda:
         "../envs/deepvariant.yaml"
     singularity:

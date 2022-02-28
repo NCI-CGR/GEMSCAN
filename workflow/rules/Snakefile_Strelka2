@@ -4,40 +4,7 @@
 if clusterMode == "gcp" or useRemoteFiles:
     from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
     GS = GSRemoteProvider()
-
-
-rule strelka2_AddSampleName:
-    """Adding sampleName to Strelka genome and variant VCFs
-    Change the Strelka2 output generic genome VCF file name to having the sample name in it.
-    """
-    input:
-        gvcf=(
-            "strelka2/calledByChrom/{chrom}/{sample}/results/variants/genome.S1.vcf.gz"
-            if by_chrom
-            else "strelka2/calledBySample/{sample}/results/variants/genome.S1.vcf.gz"
-        ),
-        gvcf_tbi=(
-            "strelka2/calledByChrom/{chrom}/{sample}/results/variants/genome.S1.vcf.gz.tbi"
-            if by_chrom
-            else "strelka2/calledBySample/{sample}/results/variants/genome.S1.vcf.gz.tbi"
-        ),
-    output:
-        gvcf=(
-            "strelka2/calledByChrom/{chrom}/{sample}/results/variants/{sample}.S1.vcf.gz"
-            if by_chrom
-            else "strelka2/called/genome.{sample}.vcf.gz"
-        ),
-        gvcf_tbi=(
-            "strelka2/calledByChrom/{chrom}/{sample}/results/variants/{sample}.S1.vcf.gz.tbi"
-            if by_chrom
-            else "strelka2/called/genome.{sample}.vcf.gz.tbi"
-        ),
-    conda:
-        "../envs/environment.yaml"
-    shell:
-        "mv {input.gvcf} {output.gvcf};"
-        "mv {input.gvcf_tbi} {output.gvcf_tbi};"
-
+	
 
 rule strelka_bgZipBedFiles:
     input:
@@ -59,30 +26,32 @@ rule strelka2_callVariant:
     input:
         ref=path_sanitize(refGenome),
         ref_index=path_sanitize(refGenome + ".fai") ,
-        bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
-        bai=lambda wc: path_sanitize(sample2bamIndex[wc.sample]) ,
+        #bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
+        #bai=lambda wc: path_sanitize(sample2bamIndex[wc.sample]),
+        bam=lambda wc: sample2bam[wc.sample],
+        bai=lambda wc: sample2bamIndex[wc.sample],
         bedFileGZ="split_regions/{chrom}.bed.gz" if by_chrom else bedFileGZ,
         bedFileGZ_index="split_regions/{chrom}.bed.gz.tbi" if by_chrom else bedFileGZ + ".tbi",
     output:
-        genome_vcf=(
-            "strelka2/calledByChrom/{chrom}/{sample}/results/variants/genome.S1.vcf.gz"
+        gvcf=(
+            outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/{sample}.S1.vcf.gz"
             if by_chrom
-            else "strelka2/calledBySample/{sample}/results/variants/genome.S1.vcf.gz"
+            else outputDir + "strelka2/called/genome.{sample}.vcf.gz"
         ),
-        genome_vcf_index=(
-            "strelka2/calledByChrom/{chrom}/{sample}/results/variants/genome.S1.vcf.gz.tbi"
+        gvcf_tbi=(
+            outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/{sample}.S1.vcf.gz.tbi"
             if by_chrom
-            else "strelka2/calledBySample/{sample}/results/variants/genome.S1.vcf.gz.tbi"
+            else outputDir + "strelka2/called/genome.{sample}.vcf.gz.tbi"
         ),
         variant_vcf=(
-            "strelka2/calledByChrom/{chrom}/{sample}/results/variants/variants.vcf.gz"
+            outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/variants.vcf.gz"
             if by_chrom
-            else "strelka2/calledBySample/{sample}/results/variants/variants.vcf.gz"
+            else outputDir + "strelka2/calledBySample/{sample}/results/variants/variants.vcf.gz"
         ),
         variant_vcf_index=(
-            "strelka2/calledByChrom/{chrom}/{sample}/results/variants/variants.vcf.gz.tbi"
+            outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/variants.vcf.gz.tbi"
             if by_chrom
-            else "strelka2/calledBySample/{sample}/results/variants/variants.vcf.gz.tbi"
+            else outputDir + "strelka2/calledBySample/{sample}/results/variants/variants.vcf.gz.tbi"
         ),
     params:
         runDir=(
@@ -93,9 +62,19 @@ rule strelka2_callVariant:
         exome_param=exome_param,
         threads=threads,
         memGB=strelka2_memGB,
+        genome_vcf=(
+            outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/genome.S1.vcf.gz"
+            if by_chrom
+            else outputDir + "strelka2/calledBySample/{sample}/results/variants/genome.S1.vcf.gz"
+        ),
+        genome_vcf_index=(
+            outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/genome.S1.vcf.gz.tbi"
+            if by_chrom
+            else outputDir + "strelka2/calledBySample/{sample}/results/variants/genome.S1.vcf.gz.tbi"
+        )
     resources:
-        machine_type="n1-standard-8",
-        runtime=2880,
+        #machine_type="n1-standard-8",
+        #runtime=2880,
         mem_mb=strelka2_memGB*1000
     threads: 8
     benchmark:
@@ -110,14 +89,16 @@ rule strelka2_callVariant:
         "configureStrelkaGermlineWorkflow.py --bam {input.bam} --ref {input.ref} {params.exome_param} \
                                 --callRegions {input.bedFileGZ} --runDir {params.runDir} && \
                               {params.runDir}/runWorkflow.py -m local -j {params.threads} -g {params.memGB}"
+        "mv {params.genome_vcf} {output.gvcf};"
+        "mv {params.genome_vcf_index} {output.gvcf_tbi};"							  
 
 
 rule strelka_concatVariantsByChrom:
     input:
-        vcf=expand("strelka2/genotyped/strelka2_variants_{chrom}.bcf", chrom=chromList),
-        idx=expand("strelka2/genotyped/strelka2_variants_{chrom}.bcf.csi", chrom=chromList),
+        vcf=expand(outputDir + "strelka2/genotyped/strelka2_variants_{chrom}.bcf", chrom=chromList),
+        idx=expand(outputDir + "strelka2/genotyped/strelka2_variants_{chrom}.bcf.csi", chrom=chromList),
     output:
-        temp("strelka2/genotyped/strelka2_variants.bcf"),
+        temp(outputDir + "strelka2/genotyped/strelka2_variants.bcf"),
     params:
         temp(directory("strelka2_concat_vcfs/")),
     benchmark:
@@ -132,9 +113,9 @@ rule strelka_concatVariantsByChrom:
 
 rule strelka_indexBCFByChrom:
     input:
-        bcf="strelka2/genotyped/strelka2_variants_{chrom}.bcf",
+        bcf=outputDir + "strelka2/genotyped/strelka2_variants_{chrom}.bcf",
     output:
-        idx="strelka2/genotyped/strelka2_variants_{chrom}.bcf.csi",
+        idx=outputDir + "strelka2/genotyped/strelka2_variants_{chrom}.bcf.csi",
     benchmark:
         "run_times/strelka_indexBCFByChrom/{chrom}.tsv"
     singularity:
@@ -149,10 +130,10 @@ rule Strelka2_compress_merged_vcfs:
     """
     """
     input:
-        "strelka2/genotyped/strelka2_variants.bcf",
+        outputDir + "strelka2/genotyped/strelka2_variants.bcf",
     output:
-        gz=protected("strelka2/genotyped/strelka2_variants.vcf.gz"),
-        tbi=protected("strelka2/genotyped/strelka2_variants.vcf.gz.tbi"),
+        gz=protected(outputDir + "strelka2/genotyped/strelka2_variants.vcf.gz"),
+        tbi=protected(outputDir + "strelka2/genotyped/strelka2_variants.vcf.gz.tbi"),
     benchmark:
         "run_times/strelka2_compress_merged_vcfs/strelka2_variants.tsv"
     conda:
@@ -170,22 +151,22 @@ rule Strelka2_GLmerge_gvcfs:
     input:
         l=(
             expand(
-                "strelka2/calledByChrom/{{chrom}}/{sample}/results/variants/{sample}.S1.vcf.gz",
+                outputDir + "strelka2/calledByChrom/{{chrom}}/{sample}/results/variants/{sample}.S1.vcf.gz",
                 sample=sampleList,
             )
             if by_chrom
-            else expand("strelka2/called/genome.{sample}.vcf.gz", sample=sampleList)
+            else expand(outputDir + "strelka2/called/genome.{sample}.vcf.gz", sample=sampleList)
         ),
         m=(
-            "strelka2/called/gvcfs/manifest_{chrom}.txt"
+            outputDir + "strelka2/called/gvcfs/{chrom}/manifest.txt"
             if by_chrom
-            else "strelka2/called/gvcfs/manifest.txt"
+            else outputDir + "strelka2/called/gvcfs/manifest.txt"
         ),
         b=path_sanitize(bedFile),
         glnexusConfig=path_sanitize(glnexus_strelka2_config),
     output:
-        temp("strelka2/genotyped/strelka2_variants_{chrom}.bcf") if by_chrom else temp(
-            "strelka2/genotyped/strelka2_variants.bcf"
+        outputDir + "strelka2/genotyped/strelka2_variants_{chrom}.bcf" if by_chrom else temp(
+            outputDir + "strelka2/genotyped/strelka2_variants.bcf"
         ),
     params:
         workDir=(
@@ -195,8 +176,8 @@ rule Strelka2_GLmerge_gvcfs:
         memGB=glnexus_memGB
     threads: 8    
     resources:
-        machine_type="n1-standard-8",
-        runtime=2880,
+        #machine_type="n1-standard-8",
+        #runtime=2880,
         mem_mb=glnexus_memGB*1000
     benchmark:
         "run_times/strelka2_GLmerge_gvcfs/{chrom}/GLmerge.tsv" if by_chrom else "run_times/strelka2_GLmerge_gvcfs/GLmerge.tsv"
@@ -215,10 +196,10 @@ rule strelka2_create_each_sample_manifest:
     """Create list of files for GLnexus to merge
     """
     input:
-        "strelka2/calledByChrom/{chrom}/{sample}/results/variants/{sample}.S1.vcf.gz" if by_chrom else "strelka2/called/genome.{sample}.vcf.gz",
+        outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/{sample}.S1.vcf.gz" if by_chrom else outputDir + "strelka2/called/genome.{sample}.vcf.gz",
     output:
-        temp("strelka2/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
-            "strelka2/called/manifests/{sample}_manifest.txt"
+        temp(outputDir + "strelka2/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
+            outputDir + "strelka2/called/manifests/{sample}_manifest.txt"
         ),
     benchmark:
         "run_times/strelka2_create_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else "run_times/strelka2_create_sample_manifest/{sample}_manifest.tsv"
@@ -231,12 +212,12 @@ rule strelka2_create_each_sample_manifest:
 rule strelka2_create_cohort_manifest:
     input:
         expand(
-            "strelka2/called/manifests/{{chrom}}/{sample}_manifest.txt", sample=sampleList
+            outputDir + "strelka2/calledByChrom/{{chrom}}/{sample}/results/variants/{sample}.S1.vcf.gz", sample=sampleList, chrom=chromList
         ) if by_chrom else expand(
-            "strelka2/called/manifests/{sample}_manifest.txt", sample=sampleList
+            outputDir + "strelka2/called/genome.{sample}.vcf.gz", sample=sampleList, chrom=chromList
         ),
     output:
-        "strelka2/called/gvcfs/manifest_{chrom}.txt" if by_chrom else "strelka2/called/gvcfs/manifest.txt",
+        outputDir + "strelka2/called/gvcfs/{chrom}/manifest.txt" if by_chrom else outputDir + "strelka2/called/gvcfs/manifest.txt",
     benchmark:
         "run_times/strelka2_create_cohort_manifest/{chrom}_manifest.tsv" if by_chrom else "run_times/strelka2_create_cohort_manifest/manifest.tsv"
     params:
@@ -245,7 +226,18 @@ rule strelka2_create_cohort_manifest:
             if by_chrom
             else outputDir + "strelka2/called/manifests/"
         ),
-    conda:
-        "../envs/environment.yaml"
-    shell:
-        "for i in {params.manDir}*.txt; do cat $i >> {output}; done"
+    #conda:
+        #"../envs/environment.yaml"
+    #shell:
+        #"for i in {params.manDir}*.txt; do cat $i >> {output}; done"
+    run:
+        if by_chrom:
+            for manDir in output:
+                chr = os.path.basename(os.path.dirname(manDir))
+                with open(os.path.dirname(manDir) + '/manifest.txt', 'w') as outfile:
+                    for item in input:
+                        outfile.write("%s\n" % item) 
+        else:
+            with open(output[0], 'w') as outfile: 
+                for item in input:
+                    outfile.write("%s\n" % item)		

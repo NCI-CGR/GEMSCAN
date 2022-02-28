@@ -15,34 +15,34 @@ rule HC_call_variants:
     """
     input:
         ref=path_sanitize(refGenome),
-        i1=path_sanitize(refGenome + ".amb"),
-        i2=path_sanitize(refGenome + ".ann"),
-        i3=path_sanitize(refGenome + ".bwt"),
-        i4=path_sanitize(refGenome + ".pac"),
-        i5=path_sanitize(refGenome + ".sa"),
+        # i1=path_sanitize(refGenome + ".amb"),
+        # i2=path_sanitize(refGenome + ".ann"),
+        # i3=path_sanitize(refGenome + ".bwt"),
+        # i4=path_sanitize(refGenome + ".pac"),
+        # i5=path_sanitize(refGenome + ".sa"),
         i6=path_sanitize(refGenome + ".fai"),
         i7=path_sanitize(dictionaryFile),
-        bed="split_regions/{chrom}.bed" if by_chrom else bedFile,
+        bed=outputDir + "split_regions/{chrom}.bed" if by_chrom else bedFile,
         bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
         bai=lambda wc: path_sanitize(sample2bamIndex[wc.sample])
     output:
         gvcf=(
-            "HaplotypeCaller/called/{chrom}/{sample}.g.vcf"
+            outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf"
             if by_chrom
-            else "HaplotypeCaller/called/{sample}.g.vcf"
+            else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf"
         ),
         idx=(
-            "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx"
+            outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx"
             if by_chrom
-            else "HaplotypeCaller/called/{sample}.g.vcf.idx"
+            else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.idx"
         )
     resources:
         machine_type="n1-standard-8",
-        runtime=2880,
+        #runtime=2880,
         mem_mb=32000
     threads: 4    
     benchmark:
-        "run_times/HC_call_variants/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_call_variants/{sample}.tsv"
+        outputDir + "run_times/HC_call_variants/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_call_variants/{sample}.tsv"
     conda:
         "../envs/gatk4.yaml"
     singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'     
@@ -63,24 +63,24 @@ rule HC_compress_gvcfs:
     """
     input:
         gvcf=(
-            "HaplotypeCaller/called/{chrom}/{sample}.g.vcf"
+            outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf"
             if by_chrom
-            else "HaplotypeCaller/called/{sample}.g.vcf"
+            else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf"
         ),
         idx=(
-            "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx"
+            outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx"
             if by_chrom
-            else "HaplotypeCaller/called/{sample}.g.vcf.idx"
+            else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.idx"
         ),
     output:
-        temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz") if by_chrom else temp(
-            "HaplotypeCaller/called/{sample}.g.vcf.gz"
+        temp(outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz") if by_chrom else temp(
+            outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz"
         ),
-        temp("HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz.tbi") if by_chrom else temp(
-            "HaplotypeCaller/called/{sample}.g.vcf.gz.tbi"
+        temp(outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz.tbi") if by_chrom else temp(
+            outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz.tbi"
         ),
     benchmark:
-        "run_times/HC_compress_gvcfs/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_compress_gvcfs/{sample}.tsv"
+        outputDir + "run_times/HC_compress_gvcfs/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_compress_gvcfs/{sample}.tsv"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"     
     conda:
         "../envs/environment.yaml"
@@ -96,67 +96,76 @@ rule HC_create_each_sample_manifest:
     line character limits when run at scale.
     """
     input:
-        "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz" if by_chrom else "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz",
+        outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz" if by_chrom else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz",
     output:
-        temp("HaplotypeCaller/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
-            "HaplotypeCaller/called/gvcfs/{sample}_manifest.txt"
+        temp(outputDir + "HaplotypeCaller/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
+            outputDir + "HaplotypeCaller/called/gvcfs/{sample}_manifest.txt"
         ),
     resources:
         machine_type="n1-standard-2"     
     benchmark:
-        "run_times/HC_create_each_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else "run_times/HC_create_sample_manifest/{sample}_manifest.tsv"
+        outputDir + "run_times/HC_create_each_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else outputDir + "run_times/HC_create_sample_manifest/{sample}_manifest.tsv"
     shell:
         "echo {input} > {output}"
 
 rule HC_create_cohort_manifest:
     input:
         expand(
-            "HaplotypeCaller/called/manifests/{{chrom}}/{sample}_manifest.txt", sample=sampleList
+            outputDir + "HaplotypeCaller/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList 
         ) if by_chrom else expand(
-            "HaplotypeCaller/called/gvcfs/{sample}_manifest.txt", sample=sampleList
+            outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz", sample=sampleList
         ),
     output:
-        "HaplotypeCaller/called/gvcfs/manifest_{chrom}.txt" if by_chrom else "HaplotypeCaller/called/gvcfs/manifest.txt",
+        outputDir + "HaplotypeCaller/called/gvcfs/{chrom}/manifest.txt" if by_chrom else outputDir + "HaplotypeCaller/called/gvcfs/manifest.txt",
     benchmark:
-        "run_times/HC_create_cohort_manifest/{chrom}_manifest.tsv" if by_chrom else "run_times/HC_create_cohort_manifest/manifest.tsv"
-    params:
-        manDir=(
-            outputDir + "HaplotypeCaller/called/manifests/{chrom}/"
-            if by_chrom
-            else outputDir + "HaplotypeCaller/called/gvcfs/"
-        ),
-    shell:
-        "for i in {params.manDir}*.txt; do cat $i >> {output}; done"
+        outputDir + "run_times/HC_create_cohort_manifest/{chrom}_manifest.tsv" if by_chrom else outputDir + "run_times/HC_create_cohort_manifest/manifest.tsv"
+    # params:
+        # manDir=(
+            # outputDir + "HaplotypeCaller/called/manifests/{chrom}/"
+            # if by_chrom
+            # else outputDir + "HaplotypeCaller/called/gvcfs/"
+        # ),
+    run:
+        if by_chrom:
+            for manDir in output:
+                chr = os.path.basename(os.path.dirname(manDir))
+                with open(os.path.dirname(manDir) + '/manifest.txt', 'w') as outfile:
+                    for item in input:
+                        outfile.write("%s\n" % item)                       
+        else:
+            with open(output[0], 'w') as outfile: 
+                for item in input:
+                    outfile.write("%s\n" % item)
 
 
 #ideally this step is identical to all 3 callers and is only written once
 rule HC_GLmerge_gvcfs:
     input:
         l=(
-            expand("HaplotypeCaller/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList)
+            expand(outputDir + "HaplotypeCaller/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList)
             if by_chrom
-            else expand("HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz", sample=sampleList)
+            else expand(outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz", sample=sampleList)
         ),
         m=(
-            "HaplotypeCaller/called/gvcfs/manifest_{chrom}.txt"
+            outputDir + "HaplotypeCaller/called/gvcfs/{chrom}/manifest.txt"
             if by_chrom
-            else "HaplotypeCaller/called/gvcfs/manifest.txt"
+            else outputDir + "HaplotypeCaller/called/gvcfs/manifest.txt"
         ),
         b="split_regions/{chrom}.bed" if by_chrom else bedFile
     output:
-        temp("HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf") if by_chrom else 
-        temp("HaplotypeCaller/genotyped/HC_variants.bcf")
+        outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf" if by_chrom else 
+        temp(outputDir + "HaplotypeCaller/genotyped/HC_variants.bcf")
     params:
-        workDir="HC_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else "HC_GLmerge_gvcfs/all_chrs",
+        workDir=outputDir + "HC_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else outputDir + "HC_GLmerge_gvcfs/all_chrs",
         config=glnexus_gatk_config,
         memGB=glnexus_memGB
     resources:
         machine_type="n1-standard-8",
-        runtime=2880,
+        #runtime=2880,
         mem_mb=glnexus_memGB*1000 
     threads: 8     
     benchmark:
-        "run_times/HC_GLmerge_gvcfs/{chrom}/HC_GLmerge_gvcfs.tsv" if by_chrom else "run_times/HC_GLmerge_gvcfs/HC_GLmerge_gvcfs.tsv"
+        outputDir + "run_times/HC_GLmerge_gvcfs/{chrom}/HC_GLmerge_gvcfs.tsv" if by_chrom else "run_times/HC_GLmerge_gvcfs/HC_GLmerge_gvcfs.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -173,12 +182,12 @@ rule HC_concatVariantsByChrom:
     when the by_chrom option is used
     """
     input:
-        vcf=expand("HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf", chrom=chromList),
-        idx=expand("HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf.csi", chrom=chromList),
+        vcf=expand(outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf", chrom=chromList),
+        idx=expand(outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf.csi", chrom=chromList),
     output:
-        temp("HaplotypeCaller/genotyped/HC_variants.bcf"),
+        outputDir + "HaplotypeCaller/genotyped/HC_variants.bcf",
     benchmark:
-        "run_times/HC_concatVariantsByChrom/concatVariantsByChrom.tsv"
+        outputDir + "run_times/HC_concatVariantsByChrom/concatVariantsByChrom.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -189,11 +198,11 @@ rule HC_concatVariantsByChrom:
 
 rule HC_indexBCFByChrom:
     input:
-        bcf="HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf",
+        bcf=outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf",
     output:
-        idx="HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf.csi",
+        idx=outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf.csi",
     benchmark:
-        "run_times/HC_indexBCFByChrom/{chrom}.tsv"
+        outputDir + "run_times/HC_indexBCFByChrom/{chrom}.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -206,14 +215,14 @@ rule HC_concat_vcfs:
     """Concatenate vcfs
     """
     input:
-        vcf=expand("HaplotypeCaller/called/{chrom}/{{sample}}.vcf.gz", chrom=chromList),
-        idx=expand("HaplotypeCaller/called/{chrom}/{{sample}}.vcf.gz.tbi", chrom=chromList),
+        vcf=expand(outputDir + "HaplotypeCaller/called/{chrom}/{{sample}}.vcf.gz", chrom=chromList),
+        idx=expand(outputDir + "HaplotypeCaller/called/{chrom}/{{sample}}.vcf.gz.tbi", chrom=chromList),
     output:
-        gz="HaplotypeCaller/called/vcfs/{sample}_all_chroms.vcf.gz",
+        gz=outputDir + "HaplotypeCaller/called/vcfs/{sample}_all_chroms.vcf.gz",
     params:
-        temp(directory("HC_concat_vcfs/{sample}/")),
+        temp(directory(outputDir + "HC_concat_vcfs/{sample}/")),
     benchmark:
-        "run_times/HC_concat_vcfs/{sample}.tsv"
+        outputDir + "run_times/HC_concat_vcfs/{sample}.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -226,12 +235,12 @@ rule HC_concat_vcfs:
 
 rule HC_compress_merged_vcfs:
     input:
-        "HaplotypeCaller/genotyped/HC_variants.bcf",
+        outputDir + "HaplotypeCaller/genotyped/HC_variants.bcf",
     output:
-        gz=protected("HaplotypeCaller/genotyped/HC_variants.vcf.gz"),
-        tbi=protected("HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi"),
+        gz=protected(outputDir + "HaplotypeCaller/genotyped/HC_variants.vcf.gz"),
+        tbi=protected(outputDir + "HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi"),
     benchmark:
-        "run_times/HC_compress_merged_vcfs/HC_variants.tsv"
+        outputDir + "run_times/HC_compress_merged_vcfs/HC_variants.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
