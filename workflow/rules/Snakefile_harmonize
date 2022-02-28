@@ -15,74 +15,84 @@ rule Strelka2_norm_left_align_split:
     """Normalize, left-align, and split mulit-allelics in the Strelka2 vcf.
     """
     input:
-        vcf="strelka2/genotyped/strelka2_variants.vcf.gz",
-        i="strelka2/genotyped/strelka2_variants.vcf.gz.tbi",
+        vcf=outputDir + "strelka2/genotyped/strelka2_variants.vcf.gz",
+        i=outputDir + "strelka2/genotyped/strelka2_variants.vcf.gz.tbi",
         ref=path_sanitize(refGenome),
+        #ref=refGenome
     output:
-        "ensemble/strelka2_normalized.vcf.gz",
+        outputDir + "ensemble/strelka2_normalized_{chrom}.vcf.gz" if by_chrom else outputDir + "ensemble/strelka2_normalized.vcf.gz",
+    params:
+        "-r {chrom}" if by_chrom else ""   
     benchmark:
-        "run_times/strelka2_norm_left-align_split/norm.tsv"
+        outputDir + "run_times/strelka2_norm_left-align_split/norm_{chrom}.tsv" if by_chrom else outputDir + "run_times/strelka2_norm_left-align_split/norm.tsv"
     threads: threads
     conda:
         "../envs/environment.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
     shell:
-        "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} | bcftools view --min-ac 1 -Oz -o {output}"
+        "bcftools norm -f {input.ref} {params} -m - --threads {threads} {input.vcf} | bcftools view --min-ac 1 -Oz -o {output}"
 
 
 rule HC_norm_left_align_split:
     """Normalize, left-align, and split mulit-allelics in the HC vcf.
     """
     input:
-        vcf="HaplotypeCaller/genotyped/HC_variants.vcf.gz",
-        i="HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi",
+        vcf=outputDir + "HaplotypeCaller/genotyped/HC_variants.vcf.gz",
+        i=outputDir + "HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi",
         ref=path_sanitize(refGenome),
     output:
-        "ensemble/HC_normalized.vcf.gz",
+        outputDir + "ensemble/HC_normalized_{chrom}.vcf.gz" if by_chrom else outputDir + "ensemble/HC_normalized.vcf.gz",
+    params:
+        "-r {chrom}" if by_chrom else ""  
     benchmark:
-        "run_times/HC_norm_left-align_split/norm.tsv"
+        outputDir + "run_times/HC_norm_left-align_split/norm_{chrom}.tsv" if by_chrom else outputDir + "run_times/HC_norm_left-align_split/norm.tsv"
     threads: threads
     conda:
         "../envs/environment.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
     shell:
-        "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} -Oz -o {output}"
+        "bcftools norm -f {input.ref} {params} -m - --threads {threads} {input.vcf} -Oz -o {output}"
 
 
 rule DV_norm_left_align_split:
     """Normalize, left-align, and split mulit-allelics in the DV vcf.
     """
     input:
-        vcf="deepVariant/genotyped/DV_variants.vcf.gz",
-        i="deepVariant/genotyped/DV_variants.vcf.gz.tbi",
+        vcf=outputDir + "deepVariant/genotyped/DV_variants.vcf.gz",
+        i=outputDir + "deepVariant/genotyped/DV_variants.vcf.gz.tbi",
         ref=path_sanitize(refGenome),
     output:
-        "ensemble/DV_normalized.vcf.gz",
+        outputDir + "ensemble/DV_normalized_{chrom}.vcf.gz" if by_chrom else outputDir + "ensemble/DV_normalized.vcf.gz",
+    params:
+        "-r {chrom}" if by_chrom else ""         
     benchmark:
-        "run_times/DV_norm_left-align_split/norm.tsv"
+        outputDir + "run_times/DV_norm_left-align_split/norm_{chrom}.tsv" if by_chrom else outputDir + "run_times/DV_norm_left-align_split/norm.tsv"
     threads: threads
     conda:
         "../envs/environment.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
-    shell:
-        "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} -Oz -o {output}"
+    shell:        
+        "bcftools norm -f {input.ref} {params} -m - --threads {threads} {input.vcf} -Oz -o {output}"
 
 
 rule separate_header_and_vars:
     input:
-        "ensemble/{caller}_normalized.vcf.gz",
+        outputDir + "ensemble/{caller}_normalized_{chrom}.vcf.gz" if by_chrom else outputDir + "ensemble/{caller}_normalized.vcf.gz",
     output:
-        h="ensemble/{caller}_header.vcf",
-        v="ensemble/{caller}_vars.vcf",
+        h=(temp(outputDir + "ensemble/{caller}_header_{chrom}.vcf") if by_chrom else temp(outputDir + "ensemble/{caller}_header.vcf")),
+        v=(temp(outputDir + "ensemble/{caller}_vars_{chrom}.vcf") if by_chrom else temp(outputDir + "ensemble/{caller}_vars.vcf")),
+    params:
+        "-r {chrom}" if by_chrom else ""         
     benchmark:
-        "run_times/separate_header_and_vars/{caller}.tsv"
+        outputDir + "run_times/separate_header_and_vars/{caller}_{chrom}.tsv" if by_chrom else outputDir + "run_times/separate_header_and_vars/{caller}.tsv"
     threads: threads
     conda:
         "../envs/environment.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
     shell:
-        "bcftools view --threads {threads} -I -h {input} -Ov -o {output.h};"
-        "bcftools view --threads {threads} -I -H {input} -Ov -o {output.v}"
+        "tabix -f -p vcf {input};"    
+        "bcftools view {params} --threads {threads} -I -h {input} -Ov -o {output.h};"
+        "bcftools view {params} --threads {threads} -I -H {input} -Ov -o {output.v}"
 
 
 rule prepend_labels:
@@ -91,13 +101,13 @@ rule prepend_labels:
     Note that this is a bash script with no unit testing implemented.
     """
     input:
-        v="ensemble/{caller}_vars.vcf",
-        h="ensemble/{caller}_header.vcf",
+        v=(outputDir + "ensemble/{caller}_vars_{chrom}.vcf" if by_chrom else outputDir + "ensemble/{caller}_vars.vcf"),
+        h=(outputDir + "ensemble/{caller}_header_{chrom}.vcf" if by_chrom else outputDir + "ensemble/{caller}_header.vcf"),
     output:
-        v="ensemble/prepended.{caller}_vars.vcf",
-        h="ensemble/prepended.{caller}_header.vcf",
+        v=(temp(outputDir + "ensemble/prepended.{caller}_vars_{chrom}.vcf") if by_chrom else temp(outputDir + "ensemble/prepended.{caller}_vars.vcf")),
+        h=(temp(outputDir + "ensemble/prepended.{caller}_header_{chrom}.vcf") if by_chrom else temp(outputDir + "ensemble/prepended.{caller}_header.vcf")),
     benchmark:
-        "run_times/prepend_labels/{caller}.tsv"
+        outputDir + "run_times/prepend_labels/{caller}_{chrom}.tsv" if by_chrom else outputDir + "run_times/prepend_labels/{caller}.tsv"
     conda:
         "../envs/environment.yaml"
     shell:
@@ -108,15 +118,15 @@ rule recombine_headers_and_vars:
     """
     """
     input:
-        v="ensemble/prepended.{caller}_vars.vcf",
-        h="ensemble/prepended.{caller}_header.vcf",
+        v=(outputDir + "ensemble/prepended.{caller}_vars_{chrom}.vcf" if by_chrom else outputDir + "ensemble/prepended.{caller}_vars.vcf"),
+        h=(outputDir + "ensemble/prepended.{caller}_header_{chrom}.vcf" if by_chrom else outputDir + "ensemble/prepended.{caller}_header.vcf"),
     output:
-        g="ensemble/{caller}_labeled.vcf.gz",
-        i="ensemble/{caller}_labeled.vcf.gz.tbi",
+        g=(temp(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf.gz") if by_chrom else temp(outputDir + "ensemble/{caller}_labeled.vcf.gz")),
+        i=(temp(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf.gz.tbi") if by_chrom else temp(outputDir + "ensemble/{caller}_labeled.vcf.gz.tbi")),
     benchmark:
-        "run_times/recombine_headers_and_vars/{caller}.tsv" # threads:
+        outputDir + "run_times/recombine_headers_and_vars/{caller}_{chrom}.tsv" if by_chrom else outputDir + "run_times/recombine_headers_and_vars/{caller}.tsv" # threads:
     params:
-        v=outputDir + "ensemble/{caller}_labeled.vcf",
+        v=(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf" if by_chrom else outputDir +"ensemble/{caller}_labeled.vcf"),
     conda:
         "../envs/environment.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
@@ -138,12 +148,12 @@ rule merge_by_variant:
     maintaining all information in the vcf.
     """
     input:
-        vcf=expand("ensemble/{caller}_labeled.vcf.gz", caller=CALLERS),
-        vcf_index=expand("ensemble/{caller}_labeled.vcf.gz.tbi", caller=CALLERS),
+        vcf=(expand(outputDir + "ensemble/{caller}_labeled_{{chrom}}.vcf.gz", caller=CALLERS, chrom=chromList) if by_chrom else expand(outputDir + "ensemble/{caller}_labeled.vcf.gz", caller=CALLERS)),
+        vcf_index=(expand(outputDir + "ensemble/{caller}_labeled_{{chrom}}.vcf.gz.tbi", caller=CALLERS, chrom=chromList) if by_chrom else expand(outputDir + "ensemble/{caller}_labeled.vcf.gz.tbi", caller=CALLERS)),
     output:
-        "ensemble/all_callers.vcf",
+        outputDir + "ensemble/{chrom}_all_callers.vcf.gz" if by_chrom else outputDir + "ensemble/all_callers.vcf",
     benchmark:
-        "run_times/merge_by_variant/all_callers.tsv"
+        outputDir + "run_times/merge_by_variant/{chrom}_all_callers.tsv" if by_chrom else outputDir + "run_times/merge_by_variant/all_callers.tsv"
     threads: threads
     conda:
         "../envs/environment.yaml"
@@ -158,17 +168,33 @@ rule merge_by_sample:
     scripts/ directory.
     """
     input:
-        "ensemble/all_callers.vcf",
+        outputDir + "ensemble/{chrom}_all_callers.vcf.gz" if by_chrom else outputDir + "ensemble/all_callers.vcf",
     output:
-        g="ensemble/all_callers_merged_genotypes.vcf.gz",
-        i="ensemble/all_callers_merged_genotypes.vcf.gz.tbi",
+        g=(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf.gz" if by_chrom else outputDir + "ensemble/all_callers_merged_genotypes.vcf.gz"),
+        i=(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf.gz.tbi" if by_chrom else outputDir + "ensemble/all_callers_merged_genotypes.vcf.gz.tbi"),
     benchmark:
-        "run_times/merge_by_sample/all_callers_merged_genotypes.tsv"
+        outputDir + "run_times/merge_by_sample/{chrom}_all_callers_merged_genotypes.tsv" if by_chrom else outputDir + "run_times/merge_by_sample/all_callers_merged_genotypes.tsv"
     params:
-        v=outputDir + "ensemble/all_callers_merged_genotypes.vcf",
+        v=(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf" if by_chrom else outputDir +"ensemble/all_callers_merged_genotypes.vcf"),
     conda:
         "../envs/environment.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
     shell:
         "python3 scripts/genotype_union.py {input} {params.v};"
         "bgzip {params.v}; tabix -p vcf {output.g}"
+
+rule merge_by_chr:
+    input:
+        g=expand(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf.gz" , chrom=chromList),
+        i=expand(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf.gz.tbi", chrom=chromList),
+    output:
+        g=outputDir + "ensemble/all_callers_merged_genotypes.vcf.gz",
+        i=outputDir + "ensemble/all_callers_merged_genotypes.vcf.gz.tbi",
+    benchmark:
+        outputDir + "run_times/merge_by_chr/all_callers_merged_genotypes.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "bcftools concat -Oz -a -o {output.g} {input.g} " 
