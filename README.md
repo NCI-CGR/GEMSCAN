@@ -1,7 +1,7 @@
 # GEMSCAN - GErMline Snp Small Indel CAller PipeliNe 
 ![](https://nci-cgr.github.io/GEMSCAN/gemscan_logo.png)
 
-Joint variant calling with GATK4 HaplotypeCaller, Google DeepVariant 1.0.0 and Strelka2, coordinated via Snakemake.
+Joint germline variant calling with GATK4 HaplotypeCaller, Google DeepVariant 1.0.0 and Strelka2, coordinated via Snakemake.
 
 ## Authors
 
