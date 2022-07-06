@@ -7,6 +7,6 @@ max-jobs-per-second: 1
 # this setting is not always respected properly so
 # running without status checks is preferable
 max-status-checks-per-second: 0.01
-local-cores: 1
-latency-wait: 60
+local-cores: 2
+latency-wait: 180
 rerun-incomplete: true
