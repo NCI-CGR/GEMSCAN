@@ -17,7 +17,7 @@ rule validate_bed_file:
     benchmark:
         'run_times/validate_bed_file.tsv'
     conda:
-        "envs/bedops.yaml"
+        "../envs/bedops.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2021-06-18"
     log:
         "logs/validate_bed_file/validate_bed_file.log"
@@ -58,7 +58,7 @@ rule split_bed_file:
     benchmark:
         'run_times/split_bed_file/{chrom}.tsv'
     conda:
-        "envs/environment.yaml"  
+        "../envs/environment.yaml"  
     log:
         "logs/split_bed_file/split_bed_file.{chrom}.log"     
     shell:
