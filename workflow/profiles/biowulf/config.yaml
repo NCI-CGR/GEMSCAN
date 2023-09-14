@@ -1,9 +1,12 @@
-restart-times: 3
+restart-times: 0
 jobscript: "slurm-jobscript.sh"
 cluster: "slurm-submit.py"
-cluster-status: "slurm-status.py"
+# don't murder the slurm controller please
+#cluster-status: "slurm-status.py"
 max-jobs-per-second: 1
+# this setting is not always respected properly so
+# running without status checks is preferable
 max-status-checks-per-second: 0.01
-local-cores: 1
-latency-wait: 120
+local-cores: 2
+latency-wait: 180
 rerun-incomplete: true
