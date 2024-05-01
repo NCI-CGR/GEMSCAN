@@ -123,8 +123,6 @@ rule strelka_concatVariantsByChrom:
         idx=expand("strelka2/genotyped/strelka2_variants_{chrom}.bcf.csi", chrom=chromList),
     output:
         temp("strelka2/genotyped/strelka2_variants.bcf"),
-    params:
-        temp(directory("strelka2_concat_vcfs/")),
     benchmark:
         "run_times/strelka_concatVariantsByChrom/concatVariantsByChrom.tsv"
     conda:
@@ -132,7 +130,7 @@ rule strelka_concatVariantsByChrom:
     singularity:
         'docker://ghcr.io/shukwong/bcftools:20240501'      
     shell:
-        "bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output}"
+        "bcftools concat -Ou -a {input.vcf} | bcftools sort -T ./strelka2/ -Oz -o {output}"
 
 
 rule strelka_indexBCFByChrom:

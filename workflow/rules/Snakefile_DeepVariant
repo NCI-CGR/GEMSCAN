@@ -56,8 +56,6 @@ rule DV_concat_vcfs:
         idx=expand("deepVariant/called/{chrom}/{{sample}}.vcf.gz.tbi", chrom=chromList),
     output:
         gz="deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz",
-    params:
-        temp(directory("DV_concat_vcfs/{sample}/")),
     benchmark:
         "run_times/DV_concat_vcfs/{sample}.tsv"
     conda:
@@ -65,7 +63,7 @@ rule DV_concat_vcfs:
     singularity:
         "docker://ghcr.io/shukwong/bcftools:20240501"
     shell:
-        "mkdir -p {params}; bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output.gz}" # sort -k1,1 -k2,2n > {output}'
+        "mkdir -p {params}; bcftools concat -Ou -a {input.vcf} | bcftools sort -T ./deepVariant/ -Oz -o {output.gz}" # sort -k1,1 -k2,2n > {output}'
 
 
 rule DV_create_each_sample_manifest:
