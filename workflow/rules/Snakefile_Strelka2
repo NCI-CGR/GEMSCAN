@@ -107,7 +107,7 @@ rule strelka2_callVariant:
         "run_times/strelka_callVariantByChrom/{chrom}/{sample}.tsv" if by_chrom else "run_times/strelka2_callVariant/{sample}.tsv"
     conda:
         "../envs/strelka.yaml"
-    singularity: 'docker://quay.io/biocontainers/strelka:2.9.10--0'     
+    singularity: 'docker://quay.io/biocontainers/strelka:2.9.10--h9ee0642_1'     
     log:
         "logs/strelka2_callVariant/strelka2_callVariant.{chrom}.{sample}.log" if by_chrom else "logs/strelka2_callVariant/strelka2_callVariant.{sample}.log",
     shell:
