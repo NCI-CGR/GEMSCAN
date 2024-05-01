@@ -47,7 +47,7 @@ rule HC_call_variants:
         "run_times/HC_call_variants/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_call_variants/{sample}.tsv"
     conda:
         "../envs/gatk4.yaml"
-    singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'     
+    singularity: 'docker://broadinstitute/gatk:4.2.6.1'     
     shell:
         'gatk --java-options "-Xmx32G" HaplotypeCaller \
                                     -R {input.ref} \
