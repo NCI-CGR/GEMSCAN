@@ -27,7 +27,7 @@ rule Strelka2_norm_left_align_split:
     threads: threads
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} | bcftools view --min-ac 1 --threads {threads}  -Oz -o {output}"
 
@@ -48,7 +48,7 @@ rule HC_norm_left_align_split:
     threads: threads
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} -Oz -o {output}"
 
@@ -69,7 +69,7 @@ rule DV_norm_left_align_split:
     threads: threads
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "bcftools norm -f {input.ref} -m - --threads {threads} {input.vcf} -Oz -o {output}"
 
@@ -85,7 +85,7 @@ rule separate_header_and_vars:
     threads: threads
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "bcftools view --threads {threads} -I -h {input} -Ov -o {output.h};"
         "bcftools view --threads {threads} -I -H {input} -Ov -o {output.v}"
@@ -125,7 +125,7 @@ rule recombine_headers_and_vars:
         v=outputDir + "ensemble/{caller}_labeled.vcf.gz",
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "cat {input.h} {input.v} | bgzip -c > {params.v};"
         "tabix -p vcf {output.g}"
@@ -153,7 +153,7 @@ rule merge_by_variant:
     threads: threads
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "bcftools merge --force-samples --threads {threads} -m none {input.vcf} -Ov -o {output}"
 
@@ -174,7 +174,7 @@ rule merge_by_sample:
         v=outputDir + "ensemble/all_callers_merged_genotypes.vcf",
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "python3 scripts/genotype_union.py {input} {params.v};"
         "bgzip {params.v}; tabix -p vcf {output.g}"
