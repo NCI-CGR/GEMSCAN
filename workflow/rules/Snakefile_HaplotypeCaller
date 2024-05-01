@@ -83,7 +83,7 @@ rule HC_compress_gvcfs:
         ),
     benchmark:
         "run_times/HC_compress_gvcfs/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_compress_gvcfs/{sample}.tsv"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"     
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"     
     conda:
         "../envs/environment.yaml"
     shell:
@@ -162,7 +162,7 @@ rule HC_GLmerge_gvcfs:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
+        "docker://ghcr.io/shukwong/bcftools:20240501"
     shell:
         "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
         "if [ ! -f {params.workDir}/glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli -P {params.workDir}; chmod +x {params.workDir}/glnexus_cli; fi;"
@@ -184,7 +184,7 @@ rule HC_concatVariantsByChrom:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
+        "docker://ghcr.io/shukwong/bcftools:20240501"
     shell:
         "bcftools concat -Ou -a {input.vcf} > {output}"
 
@@ -202,7 +202,7 @@ rule HC_indexBCF:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
+        "docker://ghcr.io/shukwong/bcftools:20240501"
     shell:
         "bcftools index {input.bcf}"
 
@@ -222,7 +222,7 @@ rule HC_concat_vcfs:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
+        "docker://ghcr.io/shukwong/bcftools:20240501"
     shell:
         "mkdir -p {params}; bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output.gz}" # sort -k1,1 -k2,2n > {output}'
 
@@ -240,7 +240,7 @@ rule HC_compress_merged_vcfs:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
+        "docker://ghcr.io/shukwong/bcftools:20240501"
     shell:
         "bcftools view --min-ac 1 {input} | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
 

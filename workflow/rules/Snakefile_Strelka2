@@ -55,7 +55,7 @@ rule strelka_bgZipBedFiles:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"    
+        "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "bgzip -c {input.bedFile} >{input.bedFile}.gz; tabix -p bed {input.bedFile}.gz;"
 
@@ -130,7 +130,7 @@ rule strelka_concatVariantsByChrom:
     conda:
         "../envs/environment.yaml"
     singularity:
-        'docker://quay.io/shukwong/bcftools:2020-12-09'      
+        'docker://ghcr.io/shukwong/bcftools:20240501'      
     shell:
         "bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output}"
 
@@ -143,7 +143,7 @@ rule strelka_indexBCFByChrom:
     benchmark:
         "run_times/strelka_indexBCFByChrom/{chrom}.tsv"
     singularity:
-        'docker://quay.io/shukwong/bcftools:2020-12-09'     
+        'docker://ghcr.io/shukwong/bcftools:20240501'     
     conda:
         "../envs/environment.yaml"
     shell:
@@ -163,7 +163,7 @@ rule Strelka2_compress_merged_vcfs:
     conda:
         "../envs/environment.yaml"
     singularity:
-        'docker://quay.io/shukwong/bcftools:2020-12-09'    
+        'docker://ghcr.io/shukwong/bcftools:20240501'    
     shell:
         "bcftools view --min-ac 1 {input} | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
 
@@ -208,7 +208,7 @@ rule Strelka2_GLmerge_gvcfs:
     conda:
         "../envs/environment.yaml"
     singularity:
-        'docker://quay.io/shukwong/bcftools:2020-12-09'     
+        'docker://ghcr.io/shukwong/bcftools:20240501'     
     shell:
         "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
         "if [ ! -f {params.workDir}/glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli -P {params.workDir}; chmod +x {params.workDir}/glnexus_cli; fi;"
