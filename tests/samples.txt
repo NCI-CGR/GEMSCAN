@@ -1,0 +1,4 @@
+sampleID	bam	index	HCgvcf	DVgvcf	STgvcf
+OSTE_PAZPSP_A	/DCEG/Projects/Exome/builds/build_2025_Osteosarcoma_WES_build_CGRSA-1372/bam_location/OSTE/OSTE_OSTE_PAZPSP_A.bam	/DCEG/Projects/Exome/builds/build_2025_Osteosarcoma_WES_build_CGRSA-1372/bam_location/OSTE/OSTE_OSTE_PAZPSP_A.bam.bai	NO	NO	NO
+OSTE_PAZPWV-0CTT9T_A	/DCEG/Projects/Exome/builds/build_2025_Osteosarcoma_WES_build_CGRSA-1372/bam_location/OSTE/OSTE_OSTE_PAZPWV-0CTT9T_A.bam	/DCEG/Projects/Exome/builds/build_2025_Osteosarcoma_WES_build_CGRSA-1372/bam_location/OSTE/OSTE_OSTE_PAZPWV-0CTT9T_A.bam.bai	NO	/DCEG/Projects/Exome/builds/build_2024_Osteosarcoma_20240815_CGRSA-1313/GEMSCAN/deepVariant	/DCEG/Projects/Exome/builds/build_2024_Osteosarcoma_20240815_CGRSA-1313/GEMSCAN/strelka2
+

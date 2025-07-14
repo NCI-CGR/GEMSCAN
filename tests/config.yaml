@@ -1,0 +1,46 @@
+maxJobs: 500
+
+outputDir: '/DCEG/CGF/Bioinformatics/Production/Wen/20210513_GEMSCAN22/' 
+
+clusterMode: 'cluster' #or 'gcp' 
+
+useRemoteFiles: FALSE
+
+refGenome: '/DCEG/CGF/Bioinformatics/Production/data/hg38/Homo_sapiens_assembly38.fasta'
+bedFile: '/DCEG/Projects/Exome/SequencingData/BED_FILES/NimbleGen_V3UTR_HyperExome_superset_hg38/NV3UTR_Hyper_Exome_hg38.250bp.sorted.bed'
+bedFileGZ: '/DCEG/Projects/Exome/SequencingData/BED_FILES/NimbleGen_V3UTR_HyperExome_superset_hg38/NV3UTR_Hyper_Exome_hg38.250bp.sorted.bed.gz'
+
+runMode:
+  streka2: TRUE
+  haplotypeCaller: TRUE
+  deepVariant: TRUE
+  harmonize: TRUE  # will only be run if both callers are used
+
+by_chrom_gvcf: FALSE #if you like the workflow to be run by chromosome, FALSE if you like to to be run by sample
+threads: 8
+by_chrom_ensemble: FALSE
+
+# DeepVariant parameters
+model_type: WES #PACBIO or WGS or WES
+dv_memGB: 16 #it is recommended that this memory to be set to roughly the same as the BAM file size
+
+# Strelka2 parameters
+glnexusConfig: '/DCEG/CGF/Bioinformatics/Production/Wen/git/GEMSCAN/config/strelka2_glnexus.yml'
+exome_param: '' # '--exome' if it's WES, otherwise ''
+strelka2_memGB: 16
+
+# glnexus parameters
+glnexus_memGB: 16
+glnexus_strelka2_config: '/DCEG/CGF/Bioinformatics/Production/Wen/git/GEMSCAN/config/strelka2_glnexus.yml' #full path to config/strelka2_glnexus.yml
+glnexus_gatk_config: 'gatk' # 'gatk' is optimized config or 'gatk_unfiltered'  if you have a small sample size (<1000) and you do not want any filtering
+glnexus_dv_config: 'DeepVariantWGS' #other options include DeepVariantWGS, DeepVariant_unfiltered
+#
+#
+## DeepVariant parameters
+#model_type:  WES #or WGS if the samples are from WGS
+#dv_memGB: 16 #it is recommended that this memory to be set to roughly the same as the BAM file size
+#
+## Strelka2 parameters
+#exome_param:  '--exome'
+#strelka2_memGB: 16
+#

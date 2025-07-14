@@ -37,7 +37,8 @@ har_mode = config['runMode']['harmonize']
 refGenome = config['refGenome']
 #snakePath = config['snakePath'].rstrip('/') + '/'
 bedFile = config['bedFile']
-by_chrom = config['by_chrom']
+by_chrom = config['by_chrom_gvcf']
+by_chrom_ensemble = config['by_chrom_ensemble']
 threads = config['threads']
 clusterMode = config['clusterMode']
 outputDir = config['outputDir']
@@ -48,8 +49,8 @@ if clusterMode == "gcp" or useRemoteFiles:
     from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
     GS = GSRemoteProvider()
 
-if clusterMode == "cluster":
-   outputDir = "./"
+#if clusterMode == "cluster":
+#   outputDir = "./"
 
     
 #including the common functions
@@ -99,56 +100,67 @@ dt = str(datetime.now().strftime("%y-%m-%d-%H-%M"))
 #read in the samples table and create map
 samplesTable = read_samplesFile("../config/samples.txt")
 sampleList = samplesTable['sampleID']
-sample2bam =  dict(zip(samplesTable['sampleID'], samplesTable['bam']))
+sample2hcgvcf = dict(zip(samplesTable['sampleID'], samplesTable['HCgvcf']))
+sample2dvgvcf = dict(zip(samplesTable['sampleID'], samplesTable['DVgvcf']))
+sample2strelkagvcf = dict(zip(samplesTable['sampleID'], samplesTable['STgvcf']))
+sample2bam = dict(zip(samplesTable['sampleID'], samplesTable['bam']))
 sample2bamIndex = dict(zip(samplesTable['sampleID'], samplesTable['index']))
 sample2sm =  dict(zip(sampleList, sampleList))
+#print(sample2hcgvcf)
 
 # read in chromosome list from reference dict file (assumes the dict is already created)
 # this circumvents the issue of whether to use hg19-style or b37-style chromosome annotation
 # as it just pulls the chromosome names directly from the dict index.
 chromList = get_chrom_names(dictionaryFile, bedFile)
-
+print(chromList)
 #including preprocessing rules
 include: "rules/Snakefile_preprocess"
 
 
 if strelka2_mode and not dv_mode and not hc_mode:
-    include: 'rules/Snakefile_Strelka2'
+    include: 'rules/Snakefile_Strelka'
     rule all:
         input:
-            'strelka2/genotyped/strelka2_variants.vcf.gz'
+            outputDir + 'strelka2/genotyped/strelka2_variants.vcf.gz'
 
 if hc_mode and not dv_mode and not strelka2_mode:
     include: 'rules/Snakefile_HaplotypeCaller'
     rule all:
         input:
-            'HaplotypeCaller/genotyped/HC_variants.vcf.gz'
+            outputDir + 'HaplotypeCaller/genotyped/HC_variants.vcf.gz'
 
 if dv_mode and not hc_mode and not strelka2_mode:
     include: 'rules/Snakefile_DeepVariant'
     rule all:
         input:
-            expand('deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz', sample=sampleList) if by_chrom else expand('deepVariant/called_by_sample/{sample}.vcf.gz', sample=sampleList),
-            'deepVariant/genotyped/DV_variants.vcf.gz'
+            #expand(outputDir + 'deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz', sample=sampleList) if by_chrom else expand(outputDir + 'deepVariant/called_by_sample/{sample}.vcf.gz', sample=sampleList),
+            outputDir + 'deepVariant/genotyped/DV_variants.vcf.gz'
             
             
 if hc_mode and dv_mode and strelka2_mode and not har_mode:
     include: 'rules/Snakefile_HaplotypeCaller'
     include: 'rules/Snakefile_DeepVariant'
-    include: 'rules/Snakefile_Strelka2'
+    include: 'rules/Snakefile_Strelka'
     rule all:
         input:
-            'HaplotypeCaller/genotyped/HC_variants.vcf.gz',
-            'deepVariant/genotyped/DV_variants.vcf.gz',   
-            'strelka2/genotyped/strelka2_variants.vcf.gz'
+            outputDir + 'HaplotypeCaller/genotyped/HC_variants.vcf.gz',
+            outputDir + 'deepVariant/genotyped/DV_variants.vcf.gz',   
+            outputDir + 'strelka2/genotyped/strelka2_variants.vcf.gz'
             
 if hc_mode and dv_mode and strelka2_mode and har_mode:
     include: 'rules/Snakefile_HaplotypeCaller'
     include: 'rules/Snakefile_DeepVariant'
-    include: 'rules/Snakefile_Strelka2'
+    include: 'rules/Snakefile_Strelka'
     include: 'rules/Snakefile_harmonize'
     rule all:
         input:
-            'ensemble/all_callers_merged_genotypes.vcf.gz',
-            'ensemble/all_callers_merged_genotypes.vcf.gz.tbi'
+            outputDir + 'ensemble/all_callers_merged_genotypes.vcf.gz',
+            outputDir + 'ensemble/all_callers_merged_genotypes.vcf.gz.tbi'
+
+if not dv_mode and not hc_mode and not strelka2_mode and har_mode:
+    include: 'rules/Snakefile_harmonize'
+    rule all:
+        input:
+            outputDir + 'ensemble/all_callers_merged_genotypes.vcf.gz',
+            outputDir + 'ensemble/all_callers_merged_genotypes.vcf.gz.tbi'
 

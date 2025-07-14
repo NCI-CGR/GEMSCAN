@@ -8,7 +8,12 @@ if clusterMode == "gcp" or useRemoteFiles:
     from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
     GS = GSRemoteProvider()
 
-
+def gvcf(wc):
+    if by_chrom:
+        return [f"{sample2hcgvcf[wc.sample]}/called/{wc.chrom}/{wc.sample}.g.vcf.gz"]
+    else:
+        return [f"{sample2hcgvcf[wc.sample]}/called_by_sample/{wc.sample}.g.vcf.gz"]
+        
 rule HC_call_variants:
     """Call gVCFs with GATK4
     Runs over each chrom in parallel if by_chrom is true
@@ -24,38 +29,37 @@ rule HC_call_variants:
         i7=path_sanitize(dictionaryFile),
         bed=outputDir + "split_regions/{chrom}.bed" if by_chrom else bedFile,
         bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
-        bai=lambda wc: path_sanitize(sample2bamIndex[wc.sample])
+        bai=lambda wc: path_sanitize(sample2bamIndex[wc.sample]),
+    params:    
+        #gvcf=lambda wc: [sample2hcgvcf[wc.sample] + '/called/{chrom}/{sample}.g.vcf.gz'] if by_chrom else lambda wc: [sample2hcgvcf[wc.sample] + '/called_by_sample/{sample}.g.vcf.gz']
+        gvcf=gvcf
     output:
         gvcf=(
-            outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf"
+            outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz"
             if by_chrom
-            else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf"
+            else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz"
         ),
-        idx=(
-            outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx"
-            if by_chrom
-            else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.idx"
-        )
+        # idx=(
+            # outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx"
+            # if by_chrom
+            # else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.idx"
+        # )
     resources:
         machine_type="n1-standard-8",
         #runtime=2880,
         mem_mb=32000
-    threads: 4    
+    threads: 8    
     benchmark:
         outputDir + "run_times/HC_call_variants/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_call_variants/{sample}.tsv"
     conda:
         "../envs/gatk4.yaml"
     singularity: 'docker://quay.io/shukwong/gatk4:2020-12-09'     
     shell:
-        'gatk --java-options "-Xmx32G" HaplotypeCaller \
-                                    -R {input.ref} \
-                                    -I {input.bam} \
-                                    -ERC GVCF \
-                                    -L {input.bed} \
-                                    -O {output.gvcf} \
-                                    -new-qual \
-                                    -G StandardAnnotation \
-                                    -G StandardHCAnnotation'
+        #'echo {params.gvcf};'
+        'if [[ {params.gvcf} == NO* ]]; then gatk --java-options "-Xmx32G" HaplotypeCaller -R {input.ref} -I {input.bam} -ERC GVCF -L {input.bed} -O {output.gvcf} -new-qual -G StandardAnnotation -G StandardHCAnnotation;'
+        'else \
+            ln -s {params.gvcf} {output.gvcf} && ln -s {params.gvcf}.tbi {output.gvcf}.tbi; \
+        fi'        
 
 
 rule HC_compress_gvcfs:
@@ -63,57 +67,41 @@ rule HC_compress_gvcfs:
     """
     input:
         gvcf=(
-            outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf"
+            outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz"
             if by_chrom
-            else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf"
+            else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz"
         ),
-        idx=(
-            outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx"
-            if by_chrom
-            else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.idx"
-        ),
+        # idx=(
+            # outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.idx"
+            # if by_chrom
+            # else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.idx"
+        # ),
     output:
-        temp(outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz") if by_chrom else temp(
-            outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz"
-        ),
-        temp(outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz.tbi") if by_chrom else temp(
-            outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz.tbi"
-        ),
+        # temp(outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz") if by_chrom else temp(
+            # outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz"
+        # ),
+        outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz.tbi" if by_chrom else 
+            outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz.tbi",
     benchmark:
         outputDir + "run_times/HC_compress_gvcfs/{chrom}_{sample}.tsv" if by_chrom else "run_times/HC_compress_gvcfs/{sample}.tsv"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"     
     conda:
         "../envs/environment.yaml"
     shell:
-        "bgzip {input.gvcf}; tabix -p vcf {input.gvcf}.gz"
+        "tabix -p vcf {input.gvcf}"
 
-
-
-rule HC_create_each_sample_manifest:
-    """Create list of files for GLnexus to merge
-    Needed to break up into two steps (individual manifest,
-    then merging to cohort manifest) to work around command
-    line character limits when run at scale.
-    """
-    input:
-        outputDir + "HaplotypeCaller/called/{chrom}/{sample}.g.vcf.gz" if by_chrom else outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz",
-    output:
-        temp(outputDir + "HaplotypeCaller/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
-            outputDir + "HaplotypeCaller/called/gvcfs/{sample}_manifest.txt"
-        ),
-    resources:
-        machine_type="n1-standard-2"     
-    benchmark:
-        outputDir + "run_times/HC_create_each_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else outputDir + "run_times/HC_create_sample_manifest/{sample}_manifest.tsv"
-    shell:
-        "echo {input} > {output}"
 
 rule HC_create_cohort_manifest:
     input:
-        expand(
+        vcf = expand(
             outputDir + "HaplotypeCaller/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList 
         ) if by_chrom else expand(
             outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz", sample=sampleList
+        ),
+        index = expand(
+            outputDir + "HaplotypeCaller/called/{{chrom}}/{sample}.g.vcf.gz.tbi", sample=sampleList 
+        ) if by_chrom else expand(
+            outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz.tbi", sample=sampleList
         ),
     output:
         outputDir + "HaplotypeCaller/called/gvcfs/{chrom}/manifest.txt" if by_chrom else outputDir + "HaplotypeCaller/called/gvcfs/manifest.txt",
@@ -130,11 +118,11 @@ rule HC_create_cohort_manifest:
             for manDir in output:
                 chr = os.path.basename(os.path.dirname(manDir))
                 with open(os.path.dirname(manDir) + '/manifest.txt', 'w') as outfile:
-                    for item in input:
+                    for item in input.vcf:
                         outfile.write("%s\n" % item)                       
         else:
             with open(output[0], 'w') as outfile: 
-                for item in input:
+                for item in input.vcf:
                     outfile.write("%s\n" % item)
 
 
@@ -151,7 +139,7 @@ rule HC_GLmerge_gvcfs:
             if by_chrom
             else outputDir + "HaplotypeCaller/called/gvcfs/manifest.txt"
         ),
-        b="split_regions/{chrom}.bed" if by_chrom else bedFile
+        b=outputDir + "split_regions/{chrom}.bed" if by_chrom else bedFile
     output:
         outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf" if by_chrom else 
         temp(outputDir + "HaplotypeCaller/genotyped/HC_variants.bcf")
@@ -163,7 +151,7 @@ rule HC_GLmerge_gvcfs:
         machine_type="n1-standard-8",
         #runtime=2880,
         mem_mb=glnexus_memGB*1000 
-    threads: 8     
+    threads: 16     
     benchmark:
         outputDir + "run_times/HC_GLmerge_gvcfs/{chrom}/HC_GLmerge_gvcfs.tsv" if by_chrom else "run_times/HC_GLmerge_gvcfs/HC_GLmerge_gvcfs.tsv"
     conda:

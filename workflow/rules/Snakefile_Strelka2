@@ -5,13 +5,18 @@ if clusterMode == "gcp" or useRemoteFiles:
     from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
     GS = GSRemoteProvider()
 	
-
+def gvcf(wc):
+    if by_chrom:
+        return [f"{sample2strelkagvcf[wc.sample]}/calledByChrom/{wc.chrom}/{wc.sample}/results/variants/{wc.sample}.S1.vcf.gz"]
+    else:
+        return [f"{sample2strelkagvcf[wc.sample]}/called/genome.{wc.sample}.vcf.gz"]
+		
 rule strelka_bgZipBedFiles:
     input:
-        bedFile="split_regions/{chrom}.bed",
+        bedFile=outputDir + "split_regions/{chrom}.bed",
     output:
-        bedFileGZ="split_regions/{chrom}.bed.gz",
-        bedFileGZ_IDX="split_regions/{chrom}.bed.gz.tbi",
+        bedFileGZ=outputDir + "split_regions/{chrom}.bed.gz",
+        bedFileGZ_IDX=outputDir + "split_regions/{chrom}.bed.gz.tbi",
     benchmark:
         "run_times/strelka_bgZipBedFiles/{chrom}.tsv"
     conda:
@@ -30,8 +35,8 @@ rule strelka2_callVariant:
         #bai=lambda wc: path_sanitize(sample2bamIndex[wc.sample]),
         bam=lambda wc: sample2bam[wc.sample],
         bai=lambda wc: sample2bamIndex[wc.sample],
-        bedFileGZ="split_regions/{chrom}.bed.gz" if by_chrom else bedFileGZ,
-        bedFileGZ_index="split_regions/{chrom}.bed.gz.tbi" if by_chrom else bedFileGZ + ".tbi",
+        bedFileGZ=outputDir + "split_regions/{chrom}.bed.gz" if by_chrom else bedFileGZ,
+        bedFileGZ_index=outputDir + "split_regions/{chrom}.bed.gz.tbi" if by_chrom else bedFileGZ + ".tbi",
     output:
         gvcf=(
             outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/{sample}.S1.vcf.gz"
@@ -43,16 +48,16 @@ rule strelka2_callVariant:
             if by_chrom
             else outputDir + "strelka2/called/genome.{sample}.vcf.gz.tbi"
         ),
-        variant_vcf=(
-            outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/variants.vcf.gz"
-            if by_chrom
-            else outputDir + "strelka2/calledBySample/{sample}/results/variants/variants.vcf.gz"
-        ),
-        variant_vcf_index=(
-            outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/variants.vcf.gz.tbi"
-            if by_chrom
-            else outputDir + "strelka2/calledBySample/{sample}/results/variants/variants.vcf.gz.tbi"
-        ),
+        #variant_vcf=(
+        #    outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/variants.vcf.gz"
+        #    if by_chrom
+        #    else outputDir + "strelka2/calledBySample/{sample}/results/variants/variants.vcf.gz"
+        #),
+        #variant_vcf_index=(
+        #    outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/variants.vcf.gz.tbi"
+        #    if by_chrom
+        #    else outputDir + "strelka2/calledBySample/{sample}/results/variants/variants.vcf.gz.tbi"
+        #),
     params:
         runDir=(
             outputDir + "strelka2/calledByChrom/{chrom}/{sample}"
@@ -71,10 +76,12 @@ rule strelka2_callVariant:
             outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/genome.S1.vcf.gz.tbi"
             if by_chrom
             else outputDir + "strelka2/calledBySample/{sample}/results/variants/genome.S1.vcf.gz.tbi"
-        )
+        ),
+        gvcf=gvcf
     resources:
         #machine_type="n1-standard-8",
         #runtime=2880,
+        tmpdir="/scratch/luow2",
         mem_mb=strelka2_memGB*1000
     threads: 8
     benchmark:
@@ -86,12 +93,8 @@ rule strelka2_callVariant:
         "logs/strelka2_callVariant/strelka2_callVariant.{chrom}.{sample}.log" if by_chrom else "logs/strelka2_callVariant/strelka2_callVariant.{sample}.log",
     shell:
         "[ -d {params.runDir} ] && rm -rf {params.runDir};"
-        "configureStrelkaGermlineWorkflow.py --bam {input.bam} --ref {input.ref} {params.exome_param} \
-                                --callRegions {input.bedFileGZ} --runDir {params.runDir} && \
-                              {params.runDir}/runWorkflow.py -m local -j {params.threads} -g {params.memGB}"
-        "mv {params.genome_vcf} {output.gvcf};"
-        "mv {params.genome_vcf_index} {output.gvcf_tbi};"							  
-
+        "if [[ {params.gvcf} == NO* ]]; then configureStrelkaGermlineWorkflow.py --bam {input.bam} --ref {input.ref} {params.exome_param} --callRegions {input.bedFileGZ} --runDir {params.runDir} && {params.runDir}/runWorkflow.py -m local -j {params.threads} -g {params.memGB};else mkdir -p $(dirname {params.genome_vcf}); cp -l {params.gvcf} {params.genome_vcf} && cp -l {params.gvcf}.tbi {params.genome_vcf_index}; fi;"   							  
+        "mv {params.genome_vcf} {output.gvcf} && mv {params.genome_vcf_index} {output.gvcf_tbi};"						  
 
 rule strelka_concatVariantsByChrom:
     input:
@@ -162,7 +165,7 @@ rule Strelka2_GLmerge_gvcfs:
             if by_chrom
             else outputDir + "strelka2/called/gvcfs/manifest.txt"
         ),
-        b=path_sanitize(bedFile),
+        b=outputDir + "split_regions/{chrom}.bed" if by_chrom else path_sanitize(bedFile),
         glnexusConfig=path_sanitize(glnexus_strelka2_config),
     output:
         outputDir + "strelka2/genotyped/strelka2_variants_{chrom}.bcf" if by_chrom else temp(

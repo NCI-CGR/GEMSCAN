@@ -20,11 +20,11 @@ rule Strelka2_norm_left_align_split:
         ref=path_sanitize(refGenome),
         #ref=refGenome
     output:
-        outputDir + "ensemble/strelka2_normalized_{chrom}.vcf.gz" if by_chrom else outputDir + "ensemble/strelka2_normalized.vcf.gz",
+        outputDir + "ensemble/strelka2_normalized_{chrom}.vcf.gz" if by_chrom_ensemble else outputDir + "ensemble/strelka2_normalized.vcf.gz",
     params:
-        "-r {chrom}" if by_chrom else ""   
+        "-r {chrom}" if by_chrom_ensemble else ""   
     benchmark:
-        outputDir + "run_times/strelka2_norm_left-align_split/norm_{chrom}.tsv" if by_chrom else outputDir + "run_times/strelka2_norm_left-align_split/norm.tsv"
+        outputDir + "run_times/strelka2_norm_left-align_split/norm_{chrom}.tsv" if by_chrom_ensemble else outputDir + "run_times/strelka2_norm_left-align_split/norm.tsv"
     threads: threads
     conda:
         "../envs/environment.yaml"
@@ -41,11 +41,11 @@ rule HC_norm_left_align_split:
         i=outputDir + "HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi",
         ref=path_sanitize(refGenome),
     output:
-        outputDir + "ensemble/HC_normalized_{chrom}.vcf.gz" if by_chrom else outputDir + "ensemble/HC_normalized.vcf.gz",
+        outputDir + "ensemble/HC_normalized_{chrom}.vcf.gz" if by_chrom_ensemble else outputDir + "ensemble/HC_normalized.vcf.gz",
     params:
-        "-r {chrom}" if by_chrom else ""  
+        "-r {chrom}" if by_chrom_ensemble else ""  
     benchmark:
-        outputDir + "run_times/HC_norm_left-align_split/norm_{chrom}.tsv" if by_chrom else outputDir + "run_times/HC_norm_left-align_split/norm.tsv"
+        outputDir + "run_times/HC_norm_left-align_split/norm_{chrom}.tsv" if by_chrom_ensemble else outputDir + "run_times/HC_norm_left-align_split/norm.tsv"
     threads: threads
     conda:
         "../envs/environment.yaml"
@@ -62,11 +62,11 @@ rule DV_norm_left_align_split:
         i=outputDir + "deepVariant/genotyped/DV_variants.vcf.gz.tbi",
         ref=path_sanitize(refGenome),
     output:
-        outputDir + "ensemble/DV_normalized_{chrom}.vcf.gz" if by_chrom else outputDir + "ensemble/DV_normalized.vcf.gz",
+        outputDir + "ensemble/DV_normalized_{chrom}.vcf.gz" if by_chrom_ensemble else outputDir + "ensemble/DV_normalized.vcf.gz",
     params:
-        "-r {chrom}" if by_chrom else ""         
+        "-r {chrom}" if by_chrom_ensemble else ""         
     benchmark:
-        outputDir + "run_times/DV_norm_left-align_split/norm_{chrom}.tsv" if by_chrom else outputDir + "run_times/DV_norm_left-align_split/norm.tsv"
+        outputDir + "run_times/DV_norm_left-align_split/norm_{chrom}.tsv" if by_chrom_ensemble else outputDir + "run_times/DV_norm_left-align_split/norm.tsv"
     threads: threads
     conda:
         "../envs/environment.yaml"
@@ -77,14 +77,14 @@ rule DV_norm_left_align_split:
 
 rule separate_header_and_vars:
     input:
-        outputDir + "ensemble/{caller}_normalized_{chrom}.vcf.gz" if by_chrom else outputDir + "ensemble/{caller}_normalized.vcf.gz",
+        outputDir + "ensemble/{caller}_normalized_{chrom}.vcf.gz" if by_chrom_ensemble else outputDir + "ensemble/{caller}_normalized.vcf.gz",
     output:
-        h=(temp(outputDir + "ensemble/{caller}_header_{chrom}.vcf") if by_chrom else temp(outputDir + "ensemble/{caller}_header.vcf")),
-        v=(temp(outputDir + "ensemble/{caller}_vars_{chrom}.vcf") if by_chrom else temp(outputDir + "ensemble/{caller}_vars.vcf")),
+        h=(temp(outputDir + "ensemble/{caller}_header_{chrom}.vcf") if by_chrom_ensemble else temp(outputDir + "ensemble/{caller}_header.vcf")),
+        v=(temp(outputDir + "ensemble/{caller}_vars_{chrom}.vcf") if by_chrom_ensemble else temp(outputDir + "ensemble/{caller}_vars.vcf")),
     params:
-        "-r {chrom}" if by_chrom else ""         
+        "-r {chrom}" if by_chrom_ensemble else ""         
     benchmark:
-        outputDir + "run_times/separate_header_and_vars/{caller}_{chrom}.tsv" if by_chrom else outputDir + "run_times/separate_header_and_vars/{caller}.tsv"
+        outputDir + "run_times/separate_header_and_vars/{caller}_{chrom}.tsv" if by_chrom_ensemble else outputDir + "run_times/separate_header_and_vars/{caller}.tsv"
     threads: threads
     conda:
         "../envs/environment.yaml"
@@ -101,13 +101,13 @@ rule prepend_labels:
     Note that this is a bash script with no unit testing implemented.
     """
     input:
-        v=(outputDir + "ensemble/{caller}_vars_{chrom}.vcf" if by_chrom else outputDir + "ensemble/{caller}_vars.vcf"),
-        h=(outputDir + "ensemble/{caller}_header_{chrom}.vcf" if by_chrom else outputDir + "ensemble/{caller}_header.vcf"),
+        v=(outputDir + "ensemble/{caller}_vars_{chrom}.vcf" if by_chrom_ensemble else outputDir + "ensemble/{caller}_vars.vcf"),
+        h=(outputDir + "ensemble/{caller}_header_{chrom}.vcf" if by_chrom_ensemble else outputDir + "ensemble/{caller}_header.vcf"),
     output:
-        v=(temp(outputDir + "ensemble/prepended.{caller}_vars_{chrom}.vcf") if by_chrom else temp(outputDir + "ensemble/prepended.{caller}_vars.vcf")),
-        h=(temp(outputDir + "ensemble/prepended.{caller}_header_{chrom}.vcf") if by_chrom else temp(outputDir + "ensemble/prepended.{caller}_header.vcf")),
+        v=(temp(outputDir + "ensemble/prepended.{caller}_vars_{chrom}.vcf") if by_chrom_ensemble else temp(outputDir + "ensemble/prepended.{caller}_vars.vcf")),
+        h=(temp(outputDir + "ensemble/prepended.{caller}_header_{chrom}.vcf") if by_chrom_ensemble else temp(outputDir + "ensemble/prepended.{caller}_header.vcf")),
     benchmark:
-        outputDir + "run_times/prepend_labels/{caller}_{chrom}.tsv" if by_chrom else outputDir + "run_times/prepend_labels/{caller}.tsv"
+        outputDir + "run_times/prepend_labels/{caller}_{chrom}.tsv" if by_chrom_ensemble else outputDir + "run_times/prepend_labels/{caller}.tsv"
     conda:
         "../envs/environment.yaml"
     shell:
@@ -118,15 +118,15 @@ rule recombine_headers_and_vars:
     """
     """
     input:
-        v=(outputDir + "ensemble/prepended.{caller}_vars_{chrom}.vcf" if by_chrom else outputDir + "ensemble/prepended.{caller}_vars.vcf"),
-        h=(outputDir + "ensemble/prepended.{caller}_header_{chrom}.vcf" if by_chrom else outputDir + "ensemble/prepended.{caller}_header.vcf"),
+        v=(outputDir + "ensemble/prepended.{caller}_vars_{chrom}.vcf" if by_chrom_ensemble else outputDir + "ensemble/prepended.{caller}_vars.vcf"),
+        h=(outputDir + "ensemble/prepended.{caller}_header_{chrom}.vcf" if by_chrom_ensemble else outputDir + "ensemble/prepended.{caller}_header.vcf"),
     output:
-        g=(temp(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf.gz") if by_chrom else temp(outputDir + "ensemble/{caller}_labeled.vcf.gz")),
-        i=(temp(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf.gz.tbi") if by_chrom else temp(outputDir + "ensemble/{caller}_labeled.vcf.gz.tbi")),
+        g=(temp(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf.gz") if by_chrom_ensemble else temp(outputDir + "ensemble/{caller}_labeled.vcf.gz")),
+        i=(temp(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf.gz.tbi") if by_chrom_ensemble else temp(outputDir + "ensemble/{caller}_labeled.vcf.gz.tbi")),
     benchmark:
-        outputDir + "run_times/recombine_headers_and_vars/{caller}_{chrom}.tsv" if by_chrom else outputDir + "run_times/recombine_headers_and_vars/{caller}.tsv" # threads:
+        outputDir + "run_times/recombine_headers_and_vars/{caller}_{chrom}.tsv" if by_chrom_ensemble else outputDir + "run_times/recombine_headers_and_vars/{caller}.tsv" # threads:
     params:
-        v=(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf" if by_chrom else outputDir +"ensemble/{caller}_labeled.vcf"),
+        v=(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf" if by_chrom_ensemble else outputDir +"ensemble/{caller}_labeled.vcf"),
     conda:
         "../envs/environment.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
@@ -148,12 +148,12 @@ rule merge_by_variant:
     maintaining all information in the vcf.
     """
     input:
-        vcf=(expand(outputDir + "ensemble/{caller}_labeled_{{chrom}}.vcf.gz", caller=CALLERS, chrom=chromList) if by_chrom else expand(outputDir + "ensemble/{caller}_labeled.vcf.gz", caller=CALLERS)),
-        vcf_index=(expand(outputDir + "ensemble/{caller}_labeled_{{chrom}}.vcf.gz.tbi", caller=CALLERS, chrom=chromList) if by_chrom else expand(outputDir + "ensemble/{caller}_labeled.vcf.gz.tbi", caller=CALLERS)),
+        vcf=(expand(outputDir + "ensemble/{caller}_labeled_{{chrom}}.vcf.gz", caller=CALLERS, chrom=chromList) if by_chrom_ensemble else expand(outputDir + "ensemble/{caller}_labeled.vcf.gz", caller=CALLERS)),
+        vcf_index=(expand(outputDir + "ensemble/{caller}_labeled_{{chrom}}.vcf.gz.tbi", caller=CALLERS, chrom=chromList) if by_chrom_ensemble else expand(outputDir + "ensemble/{caller}_labeled.vcf.gz.tbi", caller=CALLERS)),
     output:
-        outputDir + "ensemble/{chrom}_all_callers.vcf.gz" if by_chrom else outputDir + "ensemble/all_callers.vcf",
+        outputDir + "ensemble/{chrom}_all_callers.vcf.gz" if by_chrom_ensemble else outputDir + "ensemble/all_callers.vcf",
     benchmark:
-        outputDir + "run_times/merge_by_variant/{chrom}_all_callers.tsv" if by_chrom else outputDir + "run_times/merge_by_variant/all_callers.tsv"
+        outputDir + "run_times/merge_by_variant/{chrom}_all_callers.tsv" if by_chrom_ensemble else outputDir + "run_times/merge_by_variant/all_callers.tsv"
     threads: threads
     conda:
         "../envs/environment.yaml"
@@ -168,14 +168,14 @@ rule merge_by_sample:
     scripts/ directory.
     """
     input:
-        outputDir + "ensemble/{chrom}_all_callers.vcf.gz" if by_chrom else outputDir + "ensemble/all_callers.vcf",
+        outputDir + "ensemble/{chrom}_all_callers.vcf.gz" if by_chrom_ensemble else outputDir + "ensemble/all_callers.vcf",
     output:
-        g=(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf.gz" if by_chrom else outputDir + "ensemble/all_callers_merged_genotypes.vcf.gz"),
-        i=(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf.gz.tbi" if by_chrom else outputDir + "ensemble/all_callers_merged_genotypes.vcf.gz.tbi"),
+        g=(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf.gz" if by_chrom_ensemble else outputDir + "ensemble/all_callers_merged_genotypes.vcf.gz"),
+        i=(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf.gz.tbi" if by_chrom_ensemble else outputDir + "ensemble/all_callers_merged_genotypes.vcf.gz.tbi"),
     benchmark:
-        outputDir + "run_times/merge_by_sample/{chrom}_all_callers_merged_genotypes.tsv" if by_chrom else outputDir + "run_times/merge_by_sample/all_callers_merged_genotypes.tsv"
+        outputDir + "run_times/merge_by_sample/{chrom}_all_callers_merged_genotypes.tsv" if by_chrom_ensemble else outputDir + "run_times/merge_by_sample/all_callers_merged_genotypes.tsv"
     params:
-        v=(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf" if by_chrom else outputDir +"ensemble/all_callers_merged_genotypes.vcf"),
+        v=(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf" if by_chrom_ensemble else outputDir +"ensemble/all_callers_merged_genotypes.vcf"),
     conda:
         "../envs/environment.yaml"
     singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    

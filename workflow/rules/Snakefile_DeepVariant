@@ -13,6 +13,12 @@ if clusterMode == "gcp" or useRemoteFiles:
     from snakemake.remote.GS import RemoteProvider as GSRemoteProvider
     GS = GSRemoteProvider()
 
+def gvcf(wc):
+    if by_chrom:
+        return [f"{sample2dvgvcf[wc.sample]}/called/{wc.chrom}/{wc.sample}.g.vcf.gz"]
+    else:
+        return [f"{sample2dvgvcf[wc.sample]}/called_by_sample/{wc.sample}.g.vcf.gz"]
+     
 
 rule DV_concatVariantsByChrom:
     """Concatenating GLnexus merged bcf into single joined genotyped bcf,
@@ -159,7 +165,7 @@ rule DV_GLmerge_gvcfs:
             if by_chrom
             else outputDir +  "deepVariant/called/gvcfs/manifest.txt"
         ),
-        b="split_regions/{chrom}.bed" if by_chrom else bedFile,
+        b=outputDir + "split_regions/{chrom}.bed" if by_chrom else bedFile,
     output:
         outputDir +  "deepVariant/genotyped/DV_variants_{chrom}.bcf" if by_chrom else temp(
             outputDir +  "deepVariant/genotyped/DV_variants.bcf"
@@ -211,7 +217,7 @@ rule DV_run_deepvariant:
         ref_index=path_sanitize(refGenome + ".fai"),
         bam=lambda wc: path_sanitize(sample2bam[wc.sample]),
         bai=lambda wc: path_sanitize(sample2bamIndex[wc.sample]),
-        bed="split_regions/{chrom}.bed" if by_chrom else bedFile,
+        bed=outputDir + "split_regions/{chrom}.bed" if by_chrom else bedFile,
     output:
         vcf=(
             outputDir +  "deepVariant/called/{chrom}/{sample}.vcf.gz"
@@ -241,6 +247,7 @@ rule DV_run_deepvariant:
         tmp_dir="DV_run_deepvariant_TMP",
         log_dir=outputDir + "/logs",
         #model_dir=get_DV_model_path(model_type)
+        gvcf=gvcf
     resources:
         machine_type="n1-standard-8",
         #runtime=2880,
@@ -255,37 +262,40 @@ rule DV_run_deepvariant:
     log:
         "logs/DV_run_deepvariant/DV_run_deepvariant.{chrom}.{sample}.log" if by_chrom else "logs/DV_run_deepvariant/DV_run_deepvariant.{sample}.log",
     shell:
-        "if [ -f /opt/deepvariant/bin/run_deepvariant ]; then \
-        /opt/deepvariant/bin/run_deepvariant \
-                                --model_type={params.model_type} \
-                                --ref={input.ref}  \
-                                --reads={input.bam} \
-                                --regions {input.bed} \
-                                --sample_name {params.sm} \
-                                --output_vcf={output.vcf} \
-                                --output_gvcf={output.gvcf} \
-                                --num_shards={params.threads}; \
-        else \
-        rm -rf {params.tmp_dir}; mkdir -p {params.tmp_dir}; \
-        dv_make_examples.py \
-                --cores {threads} \
-                --ref {input.ref} \
-                --reads {input.bam} \
-                --sample {params.sm} \
-                --examples {params.tmp_dir}/{params.sm} \
-                --gvcf {params.tmp_dir}/{params.sm}.gvcf.tmp \
-                --logdir {params.log_dir}; \
-        dv_call_variants.py \
-                --cores {threads} \
-                --outfile {params.tmp_dir}/{params.sm}.tmp \
-                --sample {params.sm} \
-                --examples {params.tmp_dir}/{params.sm} \
-                --model {params.model_type}; \
-        dv_postprocess_variants.py \
-                --ref {input.ref} \
-                --infile {params.tmp_dir}/{params.sm}.tmp \
-                --outfile {output.vcf} \
-                --gvcf_infile {params.tmp_dir}/{params.sm}.gvcf.tmp \
-                --gvcf_outfile {output.gvcf}; \
-        fi"
+        'if [[ {params.gvcf} == NO* ]]; then \
+            if [ -f /opt/deepvariant/bin/run_deepvariant ]; then \
+            /opt/deepvariant/bin/run_deepvariant \
+                                    --model_type={params.model_type} \
+                                    --ref={input.ref}  \
+                                    --reads={input.bam} \
+                                    --regions {input.bed} \
+                                    --sample_name {params.sm} \
+                                    --output_vcf={output.vcf} \
+                                    --output_gvcf={output.gvcf} \
+                                    --num_shards={params.threads}; \
+            else \
+            rm -rf {params.tmp_dir}; mkdir -p {params.tmp_dir}; \
+            dv_make_examples.py \
+                    --cores {threads} \
+                    --ref {input.ref} \
+                    --reads {input.bam} \
+                    --sample {params.sm} \
+                    --examples {params.tmp_dir}/{params.sm} \
+                    --gvcf {params.tmp_dir}/{params.sm}.gvcf.tmp \
+                    --logdir {params.log_dir}; \
+            dv_call_variants.py \
+                    --cores {threads} \
+                    --outfile {params.tmp_dir}/{params.sm}.tmp \
+                    --sample {params.sm} \
+                    --examples {params.tmp_dir}/{params.sm} \
+                    --model {params.model_type}; \
+            dv_postprocess_variants.py \
+                    --ref {input.ref} \
+                    --infile {params.tmp_dir}/{params.sm}.tmp \
+                    --outfile {output.vcf} \
+                    --gvcf_infile {params.tmp_dir}/{params.sm}.gvcf.tmp \
+                    --gvcf_outfile {output.gvcf}; \
+            fi; \
+        else ln -s {params.gvcf} {output.gvcf} && ln -s {params.gvcf}.tbi {output.gvcf}.tbi; ln -s {params.gvcf} {output.vcf} && ln -s {params.gvcf}.tbi {output.vcf}.tbi;\
+        fi'        
 
