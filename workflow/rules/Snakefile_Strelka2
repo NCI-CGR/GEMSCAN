@@ -94,7 +94,7 @@ rule strelka2_callVariant:
     shell:
         "[ -d {params.runDir} ] && rm -rf {params.runDir};"
         "if [[ {params.gvcf} == NO* ]]; then configureStrelkaGermlineWorkflow.py --bam {input.bam} --ref {input.ref} {params.exome_param} --callRegions {input.bedFileGZ} --runDir {params.runDir} && {params.runDir}/runWorkflow.py -m local -j {params.threads} -g {params.memGB};else mkdir -p $(dirname {params.genome_vcf}); cp -l {params.gvcf} {params.genome_vcf} && cp -l {params.gvcf}.tbi {params.genome_vcf_index}; fi;"   							  
-        "mv {params.genome_vcf} {output.gvcf} && mv {params.genome_vcf_index} {output.gvcf_tbi};"						  
+        "mv {params.genome_vcf} {output.gvcf} && mv {params.genome_vcf_index} {output.gvcf_tbi};"		
 
 rule strelka_concatVariantsByChrom:
     input:
@@ -144,7 +144,7 @@ rule Strelka2_compress_merged_vcfs:
     singularity:
         'docker://quay.io/shukwong/bcftools:2020-12-09'    
     shell:
-        "bcftools view --min-ac 1 {input} | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
+        "bcftools view --min-ac 1 {input} | sed 's/ID=AD,Number=.,/ID=AD,Number=R,/' | sed 's/ID=ADF,Number=./ID=ADF,Number=R/' | sed 's/ID=ADR,Number=./ID=ADR,Number=R/' | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
 
 
 rule Strelka2_GLmerge_gvcfs:

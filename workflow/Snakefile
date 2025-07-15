@@ -118,7 +118,7 @@ include: "rules/Snakefile_preprocess"
 
 
 if strelka2_mode and not dv_mode and not hc_mode:
-    include: 'rules/Snakefile_Strelka'
+    include: 'rules/Snakefile_Strelka2'
     rule all:
         input:
             outputDir + 'strelka2/genotyped/strelka2_variants.vcf.gz'
@@ -140,7 +140,7 @@ if dv_mode and not hc_mode and not strelka2_mode:
 if hc_mode and dv_mode and strelka2_mode and not har_mode:
     include: 'rules/Snakefile_HaplotypeCaller'
     include: 'rules/Snakefile_DeepVariant'
-    include: 'rules/Snakefile_Strelka'
+    include: 'rules/Snakefile_Strelka2'
     rule all:
         input:
             outputDir + 'HaplotypeCaller/genotyped/HC_variants.vcf.gz',
@@ -150,7 +150,7 @@ if hc_mode and dv_mode and strelka2_mode and not har_mode:
 if hc_mode and dv_mode and strelka2_mode and har_mode:
     include: 'rules/Snakefile_HaplotypeCaller'
     include: 'rules/Snakefile_DeepVariant'
-    include: 'rules/Snakefile_Strelka'
+    include: 'rules/Snakefile_Strelka2'
     include: 'rules/Snakefile_harmonize'
     rule all:
         input:
