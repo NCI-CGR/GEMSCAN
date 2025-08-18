@@ -165,13 +165,13 @@ rule DV_GLmerge_gvcfs:
             if by_chrom
             else outputDir +  "deepVariant/called/gvcfs/manifest.txt"
         ),
-        b=outputDir + "split_regions/{chrom}.bed" if by_chrom else bedFile,
+        b=outputDir + "split_regions/{chrom}.bed" if by_chrom_ensemble else bedFile,
     output:
-        outputDir +  "deepVariant/genotyped/DV_variants_{chrom}.bcf" if by_chrom else temp(
+        outputDir +  "deepVariant/genotyped/DV_variants_{chrom}.bcf" if by_chrom_ensemble else temp(
             outputDir +  "deepVariant/genotyped/DV_variants.bcf"
         ),
     params:
-        workDir=outputDir + "DV_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else outputDir + "DV_GLmerge_gvcfs/all_chrs",
+        workDir=outputDir + "DV_GLmerge_gvcfs/" + "{chrom}/" if by_chrom_ensemble else outputDir + "DV_GLmerge_gvcfs/all_chrs",
         config=glnexus_dv_config,
         memGB=glnexus_memGB
     resources:
@@ -180,7 +180,7 @@ rule DV_GLmerge_gvcfs:
         mem_mb=glnexus_memGB*1000 
     threads: 8     
     benchmark:
-        outputDir +  "run_times/DV_GLmerge_gvcfs/{chrom}/DV_GLmerge_gvcfs.tsv" if by_chrom else outputDir +  "run_times/DV_GLmerge_gvcfs/DV_GLmerge_gvcfs.tsv"
+        outputDir +  "run_times/DV_GLmerge_gvcfs/{chrom}/DV_GLmerge_gvcfs.tsv" if by_chrom_ensemble else outputDir +  "run_times/DV_GLmerge_gvcfs/DV_GLmerge_gvcfs.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:

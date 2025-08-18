@@ -197,4 +197,4 @@ rule merge_by_chr:
     singularity:
         "docker://quay.io/shukwong/bcftools:2020-12-09"
     shell:
-        "bcftools concat -Oz -a -o {output.g} {input.g} " 
+        "bcftools concat -Oz -a -o {output.g} {input.g} && tabix -p vcf {output.g}" 

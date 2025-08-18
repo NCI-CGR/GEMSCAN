@@ -139,12 +139,12 @@ rule HC_GLmerge_gvcfs:
             if by_chrom
             else outputDir + "HaplotypeCaller/called/gvcfs/manifest.txt"
         ),
-        b=outputDir + "split_regions/{chrom}.bed" if by_chrom else bedFile
+        b=outputDir + "split_regions/{chrom}.bed" if by_chrom_ensemble else bedFile
     output:
-        outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf" if by_chrom else 
+        outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf" if by_chrom_ensemble else 
         temp(outputDir + "HaplotypeCaller/genotyped/HC_variants.bcf")
     params:
-        workDir=outputDir + "HC_GLmerge_gvcfs/" + "{chrom}/" if by_chrom else outputDir + "HC_GLmerge_gvcfs/all_chrs",
+        workDir=outputDir + "HC_GLmerge_gvcfs/" + "{chrom}/" if by_chrom_ensemble else outputDir + "HC_GLmerge_gvcfs/all_chrs",
         config=glnexus_gatk_config,
         memGB=glnexus_memGB
     resources:
@@ -153,7 +153,7 @@ rule HC_GLmerge_gvcfs:
         mem_mb=glnexus_memGB*1000 
     threads: 16     
     benchmark:
-        outputDir + "run_times/HC_GLmerge_gvcfs/{chrom}/HC_GLmerge_gvcfs.tsv" if by_chrom else "run_times/HC_GLmerge_gvcfs/HC_GLmerge_gvcfs.tsv"
+        outputDir + "run_times/HC_GLmerge_gvcfs/{chrom}/HC_GLmerge_gvcfs.tsv" if by_chrom_ensemble else "run_times/HC_GLmerge_gvcfs/HC_GLmerge_gvcfs.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:

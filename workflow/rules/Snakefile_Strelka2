@@ -165,15 +165,15 @@ rule Strelka2_GLmerge_gvcfs:
             if by_chrom
             else outputDir + "strelka2/called/gvcfs/manifest.txt"
         ),
-        b=outputDir + "split_regions/{chrom}.bed" if by_chrom else path_sanitize(bedFile),
+        b=outputDir + "split_regions/{chrom}.bed" if by_chrom_ensemble else path_sanitize(bedFile),
         glnexusConfig=path_sanitize(glnexus_strelka2_config),
     output:
-        outputDir + "strelka2/genotyped/strelka2_variants_{chrom}.bcf" if by_chrom else temp(
+        outputDir + "strelka2/genotyped/strelka2_variants_{chrom}.bcf" if by_chrom_ensemble else temp(
             outputDir + "strelka2/genotyped/strelka2_variants.bcf"
         ),
     params:
         workDir=(
-            "Strelka2_GLmerge_gvcfs/" + "{chrom}/" if by_chrom
+            "Strelka2_GLmerge_gvcfs/" + "{chrom}/" if by_chrom_ensemble
             else "Strelka2_GLmerge_gvcfs/"
         ),
         memGB=glnexus_memGB
@@ -183,7 +183,7 @@ rule Strelka2_GLmerge_gvcfs:
         #runtime=2880,
         mem_mb=glnexus_memGB*1000
     benchmark:
-        "run_times/strelka2_GLmerge_gvcfs/{chrom}/GLmerge.tsv" if by_chrom else "run_times/strelka2_GLmerge_gvcfs/GLmerge.tsv"
+        "run_times/strelka2_GLmerge_gvcfs/{chrom}/GLmerge.tsv" if by_chrom_ensemble else "run_times/strelka2_GLmerge_gvcfs/GLmerge.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
