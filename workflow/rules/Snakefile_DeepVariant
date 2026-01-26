@@ -20,6 +20,25 @@ def gvcf(wc):
         return [f"{sample2dvgvcf[wc.sample]}/called_by_sample/{wc.sample}.g.vcf.gz"]
      
 
+rule DV_compress_merged_vcfs:
+    """
+    Ading --min-ac 1 here so that no calls after GLnexus merge are not in the final output
+    """
+    input:
+        outputDir +  "deepVariant/genotyped/DV_variants.bcf",
+    output:
+        gz=temp(outputDir +  "deepVariant/genotyped/DV_variants.vcf.gz"),
+        tbi=temp(outputDir +  "deepVariant/genotyped/DV_variants.vcf.gz.tbi"),
+    benchmark:
+        outputDir +  "run_times/DV_compress_merged_vcfs/DV_variants.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "bcftools view --min-ac 1 {input} | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
+        
+        
 rule DV_concatVariantsByChrom:
     """Concatenating GLnexus merged bcf into single joined genotyped bcf,
     when the by_chrom option is used
@@ -54,62 +73,37 @@ rule DV_indexBCFByChrom:
         "bcftools index {input.bcf}"
 
 
-rule DV_concat_vcfs:
+rule DV_concat_gvcfs:
     """Concatenate vcfs
     """
     input:
-        vcf=expand(outputDir +  "deepVariant/called/{chrom}/{{sample}}.vcf.gz", chrom=chromList),
-        idx=expand(outputDir +  "deepVariant/called/{chrom}/{{sample}}.vcf.gz.tbi", chrom=chromList),
+        vcf=expand(outputDir +  "deepVariant/called/{chrom}/{{sample}}.g.vcf.gz", chrom=chromList),
+        idx=expand(outputDir +  "deepVariant/called/{chrom}/{{sample}}.g.vcf.gz.tbi", chrom=chromList),
     output:
-        gz=outputDir + "deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz",
+        #gz=outputDir + "deepVariant/called/vcfs/{sample}_all_chroms.vcf.gz",
+        vcf = outputDir + "deepVariant/called_by_sample/{sample}.g.vcf.gz",
+        idx = outputDir + "deepVariant/called_by_sample/{sample}.g.vcf.gz.tbi"
     params:
-        temp(directory(outputDir + "DV_concat_vcfs/{sample}/")),
+        temp(directory(outputDir + "DV_concat_gvcfs/{sample}/")),
     benchmark:
-        outputDir +  "run_times/DV_concat_vcfs/{sample}.tsv"
+        outputDir +  "run_times/DV_concat_gvcfs/{sample}.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
         "docker://quay.io/shukwong/bcftools:2020-12-09"
     shell:
-        "mkdir -p {params}; bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output.gz}" # sort -k1,1 -k2,2n > {output}'
-
-
-rule DV_create_each_sample_manifest:
-    """Create list of files for GLnexus to merge
-    Needed to break up into two steps (individual manifest,
-    then merging to cohort manifest) to work around command
-    line character limits when run at scale.
-    """
-    input:
-        outputDir +  "deepVariant/called/{chrom}/{sample}.g.vcf.gz" if by_chrom else outputDir +  "deepVariant/called_by_sample/{sample}.g.vcf.gz",
-    output:
-        temp(outputDir +  "deepVariant/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
-            outputDir +  "deepVariant/called/gvcfs/{sample}_manifest.txt"
-        ),
-    resources:
-        machine_type="n1-standard-2"     
-    benchmark:
-        outputDir +  "run_times/DV_create_each_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else outputDir +  "run_times/DV_create_sample_manifest/{sample}_manifest.tsv"
-    shell:
-        "echo {input} > {output}"
+        "mkdir -p {params}; bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output.vcf} && tabix -p vcf {output.vcf}" # sort -k1,1 -k2,2n > {output}'
 
 
 rule DV_create_cohort_manifest:
     input:
-        # expand(
-            # outputDir +  "deepVariant/called/manifests/{{chrom}}/{sample}_manifest.txt", sample=sampleList
-        # ) if by_chrom else expand(
-            # outputDir +  "deepVariant/called/gvcfs/{sample}_manifest.txt", sample=sampleList
-        # ),
         expand(
-            outputDir +  "deepVariant/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList, chrom=chromList
-        ) if by_chrom else expand(
-            outputDir +  "deepVariant/called_by_sample/{sample}.g.vcf.gz", sample=sampleList, chrom=chromList
+            outputDir +  "deepVariant/called_by_sample/{sample}.g.vcf.gz", sample=sampleList
         ),        
     output:
-        outputDir +  "deepVariant/called/gvcfs/{chrom}/manifest.txt" if by_chrom else outputDir +  "deepVariant/called/gvcfs/manifest.txt",
+        outputDir +  "deepVariant/called/gvcfs/manifest.txt",
     benchmark:
-        outputDir +  "run_times/DV_create_cohort_manifest/{chrom}_manifest.tsv" if by_chrom else outputDir +  "run_times/DV_create_cohort_manifest/manifest.tsv"
+        outputDir +  "run_times/DV_create_cohort_manifest/manifest.tsv"
     # params:
         # manDir=(
             # outputDir + "deepVariant/called/manifests/{chrom}/"
@@ -117,19 +111,19 @@ rule DV_create_cohort_manifest:
             # else outputDir + "deepVariant/called/gvcfs/"
         # ),
     run:
-        if by_chrom:
-            for manDir in output:
-                chr = os.path.basename(os.path.dirname(manDir))
-                with open(os.path.dirname(manDir) + '/manifest.txt', 'w') as outfile:
-                    inDir = os.path.dirname(manDir).strip('gvcfs/')
-                    print(inDir)
-                    #for item in (glob('/' + inDir + wildcards.sample + '.g.vcf.gz')):     
-                    for item in input:                        
-                        outfile.write("%s\n" % item)                       
-        else:
-            with open(output[0], 'w') as outfile: 
-                for item in input:
-                    outfile.write("%s\n" % item)
+        # if by_chrom_ensemble:
+            # for manDir in output:
+                # chr = os.path.basename(os.path.dirname(manDir))
+                # with open(os.path.dirname(manDir) + '/manifest.txt', 'w') as outfile:
+                    # inDir = os.path.dirname(manDir).strip('gvcfs/')
+                    # print(inDir)
+                    # #for item in (glob('/' + inDir + wildcards.sample + '.g.vcf.gz')):     
+                    # for item in input:                        
+                        # outfile.write("%s\n" % item)                       
+        # else:
+        with open(output[0], 'w') as outfile: 
+            for item in input:
+                outfile.write("%s\n" % item)
         
 
 rule DV_GLmerge_gvcfs:
@@ -156,14 +150,10 @@ rule DV_GLmerge_gvcfs:
     """
     input:
         l=(
-            expand(outputDir +  "deepVariant/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList)
-            if by_chrom
-            else expand(outputDir +  "deepVariant/called_by_sample/{sample}.g.vcf.gz", sample=sampleList)
+            expand(outputDir +  "deepVariant/called_by_sample/{sample}.g.vcf.gz", sample=sampleList)
         ),
         m=(
-            outputDir +  "deepVariant/called/gvcfs/{chrom}/manifest.txt"
-            if by_chrom
-            else outputDir +  "deepVariant/called/gvcfs/manifest.txt"
+            outputDir +  "deepVariant/called/gvcfs/manifest.txt"
         ),
         b=outputDir + "split_regions/{chrom}.bed" if by_chrom_ensemble else bedFile,
     output:
@@ -192,23 +182,6 @@ rule DV_GLmerge_gvcfs:
         "rm {params.workDir}/glnexus_cli;"
 
 
-rule DV_compress_merged_vcfs:
-    """
-    Ading --min-ac 1 here so that no calls after GLnexus merge are not in the final output
-    """
-    input:
-        outputDir +  "deepVariant/genotyped/DV_variants.bcf",
-    output:
-        gz=protected(outputDir +  "deepVariant/genotyped/DV_variants.vcf.gz"),
-        tbi=protected(outputDir +  "deepVariant/genotyped/DV_variants.vcf.gz.tbi"),
-    benchmark:
-        outputDir +  "run_times/DV_compress_merged_vcfs/DV_variants.tsv"
-    conda:
-        "../envs/environment.yaml"
-    singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
-    shell:
-        "bcftools view --min-ac 1 {input} | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
 
 
 rule DV_run_deepvariant:

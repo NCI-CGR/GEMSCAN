@@ -151,7 +151,7 @@ rule merge_by_variant:
         vcf=(expand(outputDir + "ensemble/{caller}_labeled_{{chrom}}.vcf.gz", caller=CALLERS, chrom=chromList) if by_chrom_ensemble else expand(outputDir + "ensemble/{caller}_labeled.vcf.gz", caller=CALLERS)),
         vcf_index=(expand(outputDir + "ensemble/{caller}_labeled_{{chrom}}.vcf.gz.tbi", caller=CALLERS, chrom=chromList) if by_chrom_ensemble else expand(outputDir + "ensemble/{caller}_labeled.vcf.gz.tbi", caller=CALLERS)),
     output:
-        outputDir + "ensemble/{chrom}_all_callers.vcf.gz" if by_chrom_ensemble else outputDir + "ensemble/all_callers.vcf",
+        temp(outputDir + "ensemble/{chrom}_all_callers.vcf.gz") if by_chrom_ensemble else temp(outputDir + "ensemble/all_callers.vcf"),
     benchmark:
         outputDir + "run_times/merge_by_variant/{chrom}_all_callers.tsv" if by_chrom_ensemble else outputDir + "run_times/merge_by_variant/all_callers.tsv"
     threads: threads

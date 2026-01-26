@@ -94,19 +94,15 @@ rule HC_compress_gvcfs:
 rule HC_create_cohort_manifest:
     input:
         vcf = expand(
-            outputDir + "HaplotypeCaller/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList 
-        ) if by_chrom else expand(
             outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz", sample=sampleList
         ),
         index = expand(
-            outputDir + "HaplotypeCaller/called/{{chrom}}/{sample}.g.vcf.gz.tbi", sample=sampleList 
-        ) if by_chrom else expand(
             outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz.tbi", sample=sampleList
         ),
     output:
-        outputDir + "HaplotypeCaller/called/gvcfs/{chrom}/manifest.txt" if by_chrom else outputDir + "HaplotypeCaller/called/gvcfs/manifest.txt",
+        outputDir + "HaplotypeCaller/called/gvcfs/manifest.txt",
     benchmark:
-        outputDir + "run_times/HC_create_cohort_manifest/{chrom}_manifest.tsv" if by_chrom else outputDir + "run_times/HC_create_cohort_manifest/manifest.tsv"
+        outputDir + "run_times/HC_create_cohort_manifest/manifest.tsv"
     # params:
         # manDir=(
             # outputDir + "HaplotypeCaller/called/manifests/{chrom}/"
@@ -114,37 +110,46 @@ rule HC_create_cohort_manifest:
             # else outputDir + "HaplotypeCaller/called/gvcfs/"
         # ),
     run:
-        if by_chrom:
-            for manDir in output:
-                chr = os.path.basename(os.path.dirname(manDir))
-                with open(os.path.dirname(manDir) + '/manifest.txt', 'w') as outfile:
-                    for item in input.vcf:
-                        outfile.write("%s\n" % item)                       
-        else:
-            with open(output[0], 'w') as outfile: 
-                for item in input.vcf:
-                    outfile.write("%s\n" % item)
+        with open(output[0], 'w') as outfile: 
+            for item in input.vcf:
+                outfile.write("%s\n" % item)
 
-
+rule HC_concat_gvcfs:
+    """Concatenating GLnexus merged bcf into single joined genotyped bcf,
+    when the by_chrom option is used
+    """
+    input:
+        vcf=expand(outputDir + "HaplotypeCaller/called/{chrom}/{{sample}}.g.vcf.gz", chrom=chromList),
+        idx=expand(outputDir + "HaplotypeCaller/called/{chrom}/{{sample}}.g.vcf.gz.tbi", chrom=chromList),
+    output:
+        vcf = outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz",
+        idx = outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz.tbi"
+    params:
+        temp(directory(outputDir + "HC_concat_gvcfs/{sample}/")),
+    benchmark:
+        outputDir + "run_times/HC_concat_gvcfs/{sample}.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "mkdir -p {params}; bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output.vcf} && tabix -p vcf {output.vcf}" # sort -k1,1 -k2,2n > {output}'
+        
 #ideally this step is identical to all 3 callers and is only written once
 rule HC_GLmerge_gvcfs:
     input:
         l=(
-            expand(outputDir + "HaplotypeCaller/called/{{chrom}}/{sample}.g.vcf.gz", sample=sampleList)
-            if by_chrom
-            else expand(outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz", sample=sampleList)
+            expand(outputDir + "HaplotypeCaller/called_by_sample/{sample}.g.vcf.gz", sample=sampleList)
         ),
         m=(
-            outputDir + "HaplotypeCaller/called/gvcfs/{chrom}/manifest.txt"
-            if by_chrom
-            else outputDir + "HaplotypeCaller/called/gvcfs/manifest.txt"
+            outputDir + "HaplotypeCaller/called/gvcfs/manifest.txt"
         ),
         b=outputDir + "split_regions/{chrom}.bed" if by_chrom_ensemble else bedFile
     output:
-        outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf" if by_chrom_ensemble else 
+        temp(outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf") if by_chrom_ensemble else 
         temp(outputDir + "HaplotypeCaller/genotyped/HC_variants.bcf")
     params:
-        workDir=outputDir + "HC_GLmerge_gvcfs/" + "{chrom}/" if by_chrom_ensemble else outputDir + "HC_GLmerge_gvcfs/all_chrs",
+        workDir=outputDir + "HC_GLmerge_gvcfs/" + "{chrom}" if by_chrom_ensemble else outputDir + "HC_GLmerge_gvcfs/all_chrs",
         config=glnexus_gatk_config,
         memGB=glnexus_memGB
     resources:
@@ -153,7 +158,7 @@ rule HC_GLmerge_gvcfs:
         mem_mb=glnexus_memGB*1000 
     threads: 16     
     benchmark:
-        outputDir + "run_times/HC_GLmerge_gvcfs/{chrom}/HC_GLmerge_gvcfs.tsv" if by_chrom_ensemble else "run_times/HC_GLmerge_gvcfs/HC_GLmerge_gvcfs.tsv"
+        outputDir + "run_times/HC_GLmerge_gvcfs/{chrom}/HC_GLmerge_gvcfs.tsv" if by_chrom_ensemble else outputDir + "run_times/HC_GLmerge_gvcfs/HC_GLmerge_gvcfs.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -164,6 +169,20 @@ rule HC_GLmerge_gvcfs:
         "{params.workDir}/glnexus_cli --config {params.config} --dir {params.workDir}/GLnexus.DB  --bed {input.b} --list {input.m} -m {params.memGB} -t {threads} > {output};"
         "rm {params.workDir}/glnexus_cli;"
 
+
+rule HC_indexBCFByChrom:
+    input:
+        bcf=outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf",
+    output:
+        idx=outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf.csi",
+    benchmark:
+        outputDir + "run_times/HC_indexBCFByChrom/{chrom}.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "bcftools index {input.bcf}"
 
 rule HC_concatVariantsByChrom:
     """Concatenating GLnexus merged bcf into single joined genotyped bcf,
@@ -182,51 +201,13 @@ rule HC_concatVariantsByChrom:
         "docker://quay.io/shukwong/bcftools:2020-12-09"
     shell:
         "bcftools concat -Ou -a {input.vcf} > {output}"
-
-
-rule HC_indexBCFByChrom:
-    input:
-        bcf=outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf",
-    output:
-        idx=outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf.csi",
-    benchmark:
-        outputDir + "run_times/HC_indexBCFByChrom/{chrom}.tsv"
-    conda:
-        "../envs/environment.yaml"
-    singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
-    shell:
-        "bcftools index {input.bcf}"
-
-
-rule HC_concat_vcfs:
-    """Concatenate vcfs
-    """
-    input:
-        vcf=expand(outputDir + "HaplotypeCaller/called/{chrom}/{{sample}}.vcf.gz", chrom=chromList),
-        idx=expand(outputDir + "HaplotypeCaller/called/{chrom}/{{sample}}.vcf.gz.tbi", chrom=chromList),
-    output:
-        gz=outputDir + "HaplotypeCaller/called/vcfs/{sample}_all_chroms.vcf.gz",
-    params:
-        temp(directory(outputDir + "HC_concat_vcfs/{sample}/")),
-    benchmark:
-        outputDir + "run_times/HC_concat_vcfs/{sample}.tsv"
-    conda:
-        "../envs/environment.yaml"
-    singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
-    shell:
-        "mkdir -p {params}; bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output.gz}" # sort -k1,1 -k2,2n > {output}'
-
-
-
-
+        
 rule HC_compress_merged_vcfs:
     input:
         outputDir + "HaplotypeCaller/genotyped/HC_variants.bcf",
     output:
-        gz=protected(outputDir + "HaplotypeCaller/genotyped/HC_variants.vcf.gz"),
-        tbi=protected(outputDir + "HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi"),
+        gz=temp(outputDir + "HaplotypeCaller/genotyped/HC_variants.vcf.gz"),
+        tbi=temp(outputDir + "HaplotypeCaller/genotyped/HC_variants.vcf.gz.tbi"),
     benchmark:
         outputDir + "run_times/HC_compress_merged_vcfs/HC_variants.tsv"
     conda:
@@ -235,5 +216,3 @@ rule HC_compress_merged_vcfs:
         "docker://quay.io/shukwong/bcftools:2020-12-09"
     shell:
         "bcftools view --min-ac 1 {input} | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
-
-

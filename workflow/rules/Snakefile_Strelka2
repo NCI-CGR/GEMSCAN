@@ -18,7 +18,7 @@ rule strelka_bgZipBedFiles:
         bedFileGZ=outputDir + "split_regions/{chrom}.bed.gz",
         bedFileGZ_IDX=outputDir + "split_regions/{chrom}.bed.gz.tbi",
     benchmark:
-        "run_times/strelka_bgZipBedFiles/{chrom}.tsv"
+        outputDir + "run_times/strelka_bgZipBedFiles/{chrom}.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -85,7 +85,7 @@ rule strelka2_callVariant:
         mem_mb=strelka2_memGB*1000
     threads: 8
     benchmark:
-        "run_times/strelka_callVariantByChrom/{chrom}/{sample}.tsv" if by_chrom else "run_times/strelka2_callVariant/{sample}.tsv"
+        outputDir + "run_times/strelka_callVariantByChrom/{chrom}/{sample}.tsv" if by_chrom else outputDir + "run_times/strelka2_callVariant/{sample}.tsv"
     conda:
         "../envs/strelka.yaml"
     singularity: 'docker://quay.io/biocontainers/strelka:2.9.10--0'     
@@ -105,7 +105,7 @@ rule strelka_concatVariantsByChrom:
     params:
         temp(directory("strelka2_concat_vcfs/")),
     benchmark:
-        "run_times/strelka_concatVariantsByChrom/concatVariantsByChrom.tsv"
+        outputDir + "run_times/strelka_concatVariantsByChrom/concatVariantsByChrom.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -120,7 +120,7 @@ rule strelka_indexBCFByChrom:
     output:
         idx=outputDir + "strelka2/genotyped/strelka2_variants_{chrom}.bcf.csi",
     benchmark:
-        "run_times/strelka_indexBCFByChrom/{chrom}.tsv"
+        outputDir + "run_times/strelka_indexBCFByChrom/{chrom}.tsv"
     singularity:
         'docker://quay.io/shukwong/bcftools:2020-12-09'     
     conda:
@@ -135,10 +135,10 @@ rule Strelka2_compress_merged_vcfs:
     input:
         outputDir + "strelka2/genotyped/strelka2_variants.bcf",
     output:
-        gz=protected(outputDir + "strelka2/genotyped/strelka2_variants.vcf.gz"),
-        tbi=protected(outputDir + "strelka2/genotyped/strelka2_variants.vcf.gz.tbi"),
+        gz=temp(outputDir + "strelka2/genotyped/strelka2_variants.vcf.gz"),
+        tbi=temp(outputDir + "strelka2/genotyped/strelka2_variants.vcf.gz.tbi"),
     benchmark:
-        "run_times/strelka2_compress_merged_vcfs/strelka2_variants.tsv"
+        outputDir + "run_times/strelka2_compress_merged_vcfs/strelka2_variants.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -146,6 +146,25 @@ rule Strelka2_compress_merged_vcfs:
     shell:
         "bcftools view --min-ac 1 {input} | sed 's/ID=AD,Number=.,/ID=AD,Number=R,/' | sed 's/ID=ADF,Number=./ID=ADF,Number=R/' | sed 's/ID=ADR,Number=./ID=ADR,Number=R/' | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
 
+rule Strelka2_concat_gvcfs:
+    """Concatenate vcfs
+    """
+    input:
+        vcf=expand(outputDir + "strelka2/calledByChrom/{chrom}/{{sample}}/results/variants/{{sample}}.S1.vcf.gz", chrom=chromList, sample=sampleList),
+        idx=expand(outputDir + "strelka2/calledByChrom/{chrom}/{{sample}}/results/variants/{{sample}}.S1.vcf.gz.tbi", chrom=chromList, sample=sampleList),
+    output:
+        vcf = outputDir + "strelka2/called/genome.{sample}.vcf.gz",
+        idx = outputDir + "strelka2/called/genome.{sample}.vcf.gz.tbi"
+    params:
+        temp(directory(outputDir + "Strelka2_concat_gvcfs/{sample}/")),
+    benchmark:
+        outputDir + "run_times/Strelka2_concat_gvcfs/{sample}.tsv"
+    conda:
+        "../envs/environment.yaml"
+    singularity:
+        "docker://quay.io/shukwong/bcftools:2020-12-09"
+    shell:
+        "mkdir -p {params}; bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output.vcf} && tabix -p vcf {output.vcf}" # sort -k1,1 -k2,2n > {output}'
 
 rule Strelka2_GLmerge_gvcfs:
     """Merge Strelka gvcfs into one multi-sample vcf using the glnexus_cli
@@ -154,16 +173,10 @@ rule Strelka2_GLmerge_gvcfs:
     input:
         l=(
             expand(
-                outputDir + "strelka2/calledByChrom/{{chrom}}/{sample}/results/variants/{sample}.S1.vcf.gz",
-                sample=sampleList,
-            )
-            if by_chrom
-            else expand(outputDir + "strelka2/called/genome.{sample}.vcf.gz", sample=sampleList)
+                outputDir + "strelka2/called/genome.{sample}.vcf.gz", sample=sampleList)
         ),
         m=(
-            outputDir + "strelka2/called/gvcfs/{chrom}/manifest.txt"
-            if by_chrom
-            else outputDir + "strelka2/called/gvcfs/manifest.txt"
+            outputDir + "strelka2/called/gvcfs/manifest.txt"
         ),
         b=outputDir + "split_regions/{chrom}.bed" if by_chrom_ensemble else path_sanitize(bedFile),
         glnexusConfig=path_sanitize(glnexus_strelka2_config),
@@ -183,7 +196,7 @@ rule Strelka2_GLmerge_gvcfs:
         #runtime=2880,
         mem_mb=glnexus_memGB*1000
     benchmark:
-        "run_times/strelka2_GLmerge_gvcfs/{chrom}/GLmerge.tsv" if by_chrom_ensemble else "run_times/strelka2_GLmerge_gvcfs/GLmerge.tsv"
+        outputDir + "run_times/strelka2_GLmerge_gvcfs/{chrom}/GLmerge.tsv" if by_chrom_ensemble else outputDir + "run_times/strelka2_GLmerge_gvcfs/GLmerge.tsv"
     conda:
         "../envs/environment.yaml"
     singularity:
@@ -195,52 +208,24 @@ rule Strelka2_GLmerge_gvcfs:
         "rm {params.workDir}/glnexus_cli;"
 
 
-rule strelka2_create_each_sample_manifest:
-    """Create list of files for GLnexus to merge
-    """
-    input:
-        outputDir + "strelka2/calledByChrom/{chrom}/{sample}/results/variants/{sample}.S1.vcf.gz" if by_chrom else outputDir + "strelka2/called/genome.{sample}.vcf.gz",
-    output:
-        temp(outputDir + "strelka2/called/manifests/{chrom}/{sample}_manifest.txt") if by_chrom else temp(
-            outputDir + "strelka2/called/manifests/{sample}_manifest.txt"
-        ),
-    benchmark:
-        "run_times/strelka2_create_sample_manifest/{chrom}/{sample}_manifest.tsv" if by_chrom else "run_times/strelka2_create_sample_manifest/{sample}_manifest.tsv"
-    conda:
-        "../envs/environment.yaml"
-    shell:
-        "echo {input} > {output}"
-
-
 rule strelka2_create_cohort_manifest:
     input:
         expand(
-            outputDir + "strelka2/calledByChrom/{{chrom}}/{sample}/results/variants/{sample}.S1.vcf.gz", sample=sampleList, chrom=chromList
-        ) if by_chrom else expand(
-            outputDir + "strelka2/called/genome.{sample}.vcf.gz", sample=sampleList, chrom=chromList
+            outputDir + "strelka2/called/genome.{sample}.vcf.gz", sample=sampleList
         ),
     output:
-        outputDir + "strelka2/called/gvcfs/{chrom}/manifest.txt" if by_chrom else outputDir + "strelka2/called/gvcfs/manifest.txt",
+        outputDir + "strelka2/called/gvcfs/manifest.txt",
     benchmark:
-        "run_times/strelka2_create_cohort_manifest/{chrom}_manifest.tsv" if by_chrom else "run_times/strelka2_create_cohort_manifest/manifest.tsv"
+        "run_times/strelka2_create_cohort_manifest/manifest.tsv"
     params:
         manDir=(
-            outputDir + "strelka2/called/manifests/{chrom}/"
-            if by_chrom
-            else outputDir + "strelka2/called/manifests/"
+            outputDir + "strelka2/called/manifests/"
         ),
     #conda:
         #"../envs/environment.yaml"
     #shell:
         #"for i in {params.manDir}*.txt; do cat $i >> {output}; done"
     run:
-        if by_chrom:
-            for manDir in output:
-                chr = os.path.basename(os.path.dirname(manDir))
-                with open(os.path.dirname(manDir) + '/manifest.txt', 'w') as outfile:
-                    for item in input:
-                        outfile.write("%s\n" % item) 
-        else:
-            with open(output[0], 'w') as outfile: 
-                for item in input:
-                    outfile.write("%s\n" % item)		
+        with open(output[0], 'w') as outfile: 
+            for item in input:
+                outfile.write("%s\n" % item)		
