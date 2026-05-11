@@ -125,7 +125,7 @@ rule recombine_headers_and_vars:
     benchmark:
         outputDir + "run_times/recombine_headers_and_vars/{caller}_{chrom}.tsv" if by_chrom_ensemble else outputDir + "run_times/recombine_headers_and_vars/{caller}.tsv" # threads:
     params:
-        v=(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf" if by_chrom_ensemble else outputDir +"ensemble/{caller}_labeled.vcf"),
+        v=(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf.gz" if by_chrom_ensemble else outputDir +"ensemble/{caller}_labeled.vcf.gz"),
     conda:
         "../envs/environment.yaml"
     singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
