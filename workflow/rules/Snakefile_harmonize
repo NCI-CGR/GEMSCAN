@@ -28,7 +28,7 @@ rule Strelka2_norm_left_align_split:
     threads: threads
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "bcftools norm -f {input.ref} {params} -m - --threads {threads} {input.vcf} | bcftools view --min-ac 1 -Oz -o {output}"
 
@@ -49,7 +49,7 @@ rule HC_norm_left_align_split:
     threads: threads
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "bcftools norm -f {input.ref} {params} -m - --threads {threads} {input.vcf} -Oz -o {output}"
 
@@ -88,7 +88,7 @@ rule separate_header_and_vars:
     threads: threads
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "tabix -f -p vcf {input};"    
         "bcftools view {params} --threads {threads} -I -h {input} -Ov -o {output.h};"
@@ -129,10 +129,10 @@ rule recombine_headers_and_vars:
         v=(outputDir + "ensemble/{caller}_labeled_{chrom}.vcf" if by_chrom_ensemble else outputDir +"ensemble/{caller}_labeled.vcf"),
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
-        "cat {input.h} {input.v} > {params.v};"
-        "bgzip {params.v}; tabix -p vcf {output.g}"
+        "cat {input.h} {input.v} | bgzip -c > {params.v};"
+        "tabix -p vcf {output.g}"
 
 
 rule merge_by_variant:
@@ -157,7 +157,7 @@ rule merge_by_variant:
     threads: threads
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "bcftools merge --force-samples --threads {threads} -m none {input.vcf} -Ov -o {output}"
 
@@ -178,7 +178,7 @@ rule merge_by_sample:
         v=(outputDir + "ensemble/{chrom}_all_callers_merged_genotypes.vcf" if by_chrom_ensemble else outputDir +"ensemble/all_callers_merged_genotypes.vcf"),
     conda:
         "../envs/environment.yaml"
-    singularity: "docker://quay.io/shukwong/bcftools:2020-12-09"    
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "python3 scripts/genotype_union.py {input} {params.v};"
         "bgzip {params.v}; tabix -p vcf {output.g}"

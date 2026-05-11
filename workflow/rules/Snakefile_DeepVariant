@@ -53,7 +53,7 @@ rule DV_concatVariantsByChrom:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
+        "docker://ghcr.io/shukwong/bcftools:20240501"
     shell:
         "bcftools concat -Ou -a {input.vcf} > {output}"
 
@@ -68,7 +68,7 @@ rule DV_indexBCFByChrom:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
+        "docker://ghcr.io/shukwong/bcftools:20240501"
     shell:
         "bcftools index {input.bcf}"
 
@@ -90,7 +90,7 @@ rule DV_concat_gvcfs:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
+        "docker://ghcr.io/shukwong/bcftools:20240501"
     shell:
         "mkdir -p {params}; bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output.vcf} && tabix -p vcf {output.vcf}" # sort -k1,1 -k2,2n > {output}'
 
@@ -163,7 +163,7 @@ rule DV_GLmerge_gvcfs:
     params:
         workDir=outputDir + "DV_GLmerge_gvcfs/" + "{chrom}/" if by_chrom_ensemble else outputDir + "DV_GLmerge_gvcfs/all_chrs",
         config=glnexus_dv_config,
-        memGB=glnexus_memGB
+        memGB=math.floor(glnexus_memGB*0.9)
     resources:
         machine_type="n1-standard-8",
         #runtime=2880,
@@ -174,15 +174,12 @@ rule DV_GLmerge_gvcfs:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"
+        "docker://ghcr.io/shukwong/bcftools:20240501"
     shell:
         "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
         "if [ ! -f {params.workDir}/glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli -P {params.workDir}; chmod +x {params.workDir}/glnexus_cli; fi;"
         "{params.workDir}/glnexus_cli --config DeepVariant --dir {params.workDir}/GLnexus.DB  --bed {input.b} --list {input.m} -m {params.memGB} -t {threads} > {output};"
         "rm {params.workDir}/glnexus_cli;"
-
-
-
 
 rule DV_run_deepvariant:
     input:
@@ -271,4 +268,3 @@ rule DV_run_deepvariant:
             fi; \
         else ln -s {params.gvcf} {output.gvcf} && ln -s {params.gvcf}.tbi {output.gvcf}.tbi; ln -s {params.gvcf} {output.vcf} && ln -s {params.gvcf}.tbi {output.vcf}.tbi;\
         fi'        
-

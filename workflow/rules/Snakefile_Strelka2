@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+# Author: Wendy Wong
+
+import math
+
 """Strelka2 module of CGR germline variant calling pipeline
 """
 
@@ -22,7 +27,7 @@ rule strelka_bgZipBedFiles:
     conda:
         "../envs/environment.yaml"
     singularity:
-        "docker://quay.io/shukwong/bcftools:2020-12-09"    
+        "docker://ghcr.io/shukwong/bcftools:20240501"    
     shell:
         "bgzip -c {input.bedFile} >{input.bedFile}.gz; tabix -p bed {input.bedFile}.gz;"
 
@@ -88,7 +93,7 @@ rule strelka2_callVariant:
         outputDir + "run_times/strelka_callVariantByChrom/{chrom}/{sample}.tsv" if by_chrom else outputDir + "run_times/strelka2_callVariant/{sample}.tsv"
     conda:
         "../envs/strelka.yaml"
-    singularity: 'docker://quay.io/biocontainers/strelka:2.9.10--0'     
+    singularity: 'docker://quay.io/biocontainers/strelka:2.9.10--h9ee0642_1'     
     log:
         "logs/strelka2_callVariant/strelka2_callVariant.{chrom}.{sample}.log" if by_chrom else "logs/strelka2_callVariant/strelka2_callVariant.{sample}.log",
     shell:
@@ -109,9 +114,9 @@ rule strelka_concatVariantsByChrom:
     conda:
         "../envs/environment.yaml"
     singularity:
-        'docker://quay.io/shukwong/bcftools:2020-12-09'      
+        'docker://ghcr.io/shukwong/bcftools:20240501'      
     shell:
-        "bcftools concat -Ou -a {input.vcf} | bcftools sort -T {params} -Oz -o {output}"
+        "bcftools concat -Ou -a {input.vcf} | bcftools sort -T ./strelka2/ -Oz -o {output}"
 
 
 rule strelka_indexBCFByChrom:
@@ -122,7 +127,7 @@ rule strelka_indexBCFByChrom:
     benchmark:
         outputDir + "run_times/strelka_indexBCFByChrom/{chrom}.tsv"
     singularity:
-        'docker://quay.io/shukwong/bcftools:2020-12-09'     
+        'docker://ghcr.io/shukwong/bcftools:20240501'     
     conda:
         "../envs/environment.yaml"
     shell:
@@ -142,7 +147,7 @@ rule Strelka2_compress_merged_vcfs:
     conda:
         "../envs/environment.yaml"
     singularity:
-        'docker://quay.io/shukwong/bcftools:2020-12-09'    
+        'docker://ghcr.io/shukwong/bcftools:20240501'    
     shell:
         "bcftools view --min-ac 1 {input} | sed 's/ID=AD,Number=.,/ID=AD,Number=R,/' | sed 's/ID=ADF,Number=./ID=ADF,Number=R/' | sed 's/ID=ADR,Number=./ID=ADR,Number=R/' | bgzip -c > {output.gz}; tabix -p vcf {output.gz}"
 
@@ -189,7 +194,7 @@ rule Strelka2_GLmerge_gvcfs:
             "Strelka2_GLmerge_gvcfs/" + "{chrom}/" if by_chrom_ensemble
             else "Strelka2_GLmerge_gvcfs/"
         ),
-        memGB=glnexus_memGB
+        memGB=math.floor(glnexus_memGB*0.9)
     threads: 8    
     resources:
         #machine_type="n1-standard-8",
@@ -200,7 +205,7 @@ rule Strelka2_GLmerge_gvcfs:
     conda:
         "../envs/environment.yaml"
     singularity:
-        'docker://quay.io/shukwong/bcftools:2020-12-09'     
+        'docker://ghcr.io/shukwong/bcftools:20240501'     
     shell:
         "[ -d {params.workDir} ] && rm -rf {params.workDir}; mkdir -p {params.workDir};"
         "if [ ! -f {params.workDir}/glnexus_cli ]; then wget https://github.com/dnanexus-rnd/GLnexus/releases/download/v1.2.7/glnexus_cli -P {params.workDir}; chmod +x {params.workDir}/glnexus_cli; fi;"

@@ -20,7 +20,7 @@ def get_samples(samplesFile):
 # read in the samples file, we assume that they are in this order: sample\tbam/cram\tindex    
 def read_samplesFile(samplesFile): 
     samplesTable = pd.read_table(samplesFile, sep="\t", 
-                   header='infer')
+                   header='infer', dtype=str)
     return(samplesTable)
 
 

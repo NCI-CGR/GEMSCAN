@@ -17,13 +17,13 @@ rule validate_bed_file:
     benchmark:
         'run_times/validate_bed_file.tsv'
     conda:
-        "envs/bedops.yaml"
-    singularity: "docker://quay.io/shukwong/bedops:2021-06-13"
+        "../envs/bedops.yaml"
+    singularity: "docker://ghcr.io/shukwong/bcftools:20240501"
     log:
         "logs/validate_bed_file/validate_bed_file.log"
     shell:
-        "bedops --ec --everything {input.bed} >/dev/null 2>logs/validate_bed_file/bedops.log;"
-        "! grep ^Error logs/validate_bed_file/bedops.log && touch {output.validated}"
+        "bedtools merge -i {input.bed} >/dev/null 2>logs/validate_bed_file/bedtools_merge.log;"        
+        "! grep ^Error logs/validate_bed_file/bedtools_merge.log && touch {output.validated}"
 
 
 rule split_bed_file:
@@ -58,7 +58,7 @@ rule split_bed_file:
     benchmark:
         'run_times/split_bed_file/{chrom}.tsv'
     conda:
-        "envs/environment.yaml"  
+        "../envs/environment.yaml"  
     log:
         "logs/split_bed_file/split_bed_file.{chrom}.log"     
     shell:
