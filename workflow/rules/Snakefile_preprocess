@@ -13,7 +13,7 @@ rule validate_bed_file:
     input:
         bed = GS.remote(bedFile) if clusterMode == "gcp" else bedFile
     output:
-        validated =  'split_regions/bedFile_validated'
+        validated = outputDir + 'split_regions/bedFile_validated'
     benchmark:
         'run_times/validate_bed_file.tsv'
     conda:
@@ -52,9 +52,9 @@ rule split_bed_file:
     '''
     input:
         bed = GS.remote(bedFile) if clusterMode == "gcp" else bedFile,
-	validated =  'split_regions/bedFile_validated'
+	#validated = outputDir +  'split_regions/bedFile_validated'
     output:
-        bed =  'split_regions/{chrom}.bed'
+        bed =  outputDir + 'split_regions/{chrom}.bed'
     benchmark:
         'run_times/split_bed_file/{chrom}.tsv'
     conda:

@@ -16,7 +16,8 @@ runMode:
   deepVariant: TRUE
   harmonize: TRUE  # will only be run if all callers are used
 
-by_chrom: TRUE #if you like the workflow to be run by chromosome, FALSE if you like to to be run by sample
+by_chrom_gvcf: TRUE #if you like the workflow single caller variant call part to be run by chromosome, FALSE if you like to to be run by sample
+by_chrom_ensemble: TRUE #if you like the workflow ensemble part to be run by chromosome, FALSE if you like to to be run by sample
 threads: 2
 
 #glnexus parameters
