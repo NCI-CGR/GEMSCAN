@@ -163,7 +163,7 @@ rule DV_GLmerge_gvcfs:
             outputDir +  "deepVariant/genotyped/DV_variants.bcf"
         ),
     params:
-        workDir=outputDir + "DV_GLmerge_gvcfs/" + "{chrom}/" if by_chrom_ensemble else outputDir + "DV_GLmerge_gvcfs/all_chrs",
+        workDir="DV_GLmerge_gvcfs/" + "{chrom}/" if by_chrom_ensemble else "DV_GLmerge_gvcfs/all_chrs",
         config=glnexus_dv_config,
         memGB=math.floor(glnexus_memGB*0.9)
     resources:

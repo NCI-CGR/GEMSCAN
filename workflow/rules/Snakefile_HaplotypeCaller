@@ -151,7 +151,7 @@ rule HC_GLmerge_gvcfs:
         temp(outputDir + "HaplotypeCaller/genotyped/HC_variants_{chrom}.bcf") if by_chrom_ensemble else 
         temp(outputDir + "HaplotypeCaller/genotyped/HC_variants.bcf")
     params:
-        workDir=outputDir + "HC_GLmerge_gvcfs/" + "{chrom}" if by_chrom_ensemble else outputDir + "HC_GLmerge_gvcfs/all_chrs",
+        workDir="HC_GLmerge_gvcfs/" + "{chrom}" if by_chrom_ensemble else "HC_GLmerge_gvcfs/all_chrs",
         config=glnexus_gatk_config,
         memGB=math.floor(glnexus_memGB*0.9)
     resources:
